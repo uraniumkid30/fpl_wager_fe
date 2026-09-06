@@ -1,17 +1,49 @@
+import 'dart:async';
+
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/config/app_config.dart';
+import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/payments/presentation/payment_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 
-class TopUpScreen extends ConsumerWidget {
+class TopUpScreen extends ConsumerStatefulWidget {
   const TopUpScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<TopUpScreen> createState() => _TopUpScreenState();
+}
+
+class _TopUpScreenState extends ConsumerState<TopUpScreen>
+    with WidgetsBindingObserver {
+  String? _pendingReference;
+  bool _verifyingPendingPayment = false;
+
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void dispose() {
+    WidgetsBinding.instance.removeObserver(this);
+    super.dispose();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      unawaited(_verifyPendingPayment());
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final draft = ref.watch(topUpDraftProvider);
     final action = ref.watch(paymentActionProvider);
     return Scaffold(
@@ -69,7 +101,7 @@ class TopUpScreen extends ConsumerWidget {
                       const SizedBox(height: 12),
                     ],
                     FilledButton.icon(
-                      onPressed: action.isLoading ? null : () => _startCheckout(context, ref, draft),
+                      onPressed: action.isLoading ? null : () => _startCheckout(draft),
                       icon: action.isLoading
                           ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.open_in_new_rounded),
@@ -87,18 +119,60 @@ class TopUpScreen extends ConsumerWidget {
     );
   }
 
-  Future<void> _startCheckout(BuildContext context, WidgetRef ref, TopUpDraft draft) async {
+  Future<void> _startCheckout(TopUpDraft draft) async {
     final payment = await ref.read(paymentActionProvider.notifier).initialize(draft);
-    if (payment == null || !context.mounted) return;
+    if (!mounted) return;
+    if (payment == null) {
+      AppNotice.error(
+        context,
+        ref.read(paymentActionProvider).error ??
+            'Payment could not be initialized. Please try again.',
+      );
+      return;
+    }
     if (AppConfig.useDemoData) {
       context.go('/payments/callback?reference=${payment.reference}');
       return;
     }
+    _pendingReference = payment.reference;
     final checkout = Uri.tryParse(payment.checkoutUrl ?? '');
-    if (checkout == null || !await launchUrl(checkout, mode: LaunchMode.externalApplication)) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Could not open the secure checkout page.')));
+    final opened = checkout != null &&
+        await (kIsWeb
+            ? launchUrl(checkout, webOnlyWindowName: '_self')
+            : launchUrl(checkout, mode: LaunchMode.externalApplication));
+    if (!opened && mounted) {
+      _pendingReference = null;
+      AppNotice.error(context, 'Could not open the secure checkout page.');
+    }
+  }
+
+  Future<void> _verifyPendingPayment() async {
+    final reference = _pendingReference;
+    if (reference == null || _verifyingPendingPayment) return;
+    _verifyingPendingPayment = true;
+    try {
+      await Future<void>.delayed(const Duration(milliseconds: 700));
+      final payment = await ref.read(
+        paymentVerificationProvider(reference).future,
+      );
+      if (!mounted) return;
+      if (payment.isSuccessful) {
+        _pendingReference = null;
+        AppNotice.success(
+          context,
+          '${money(payment.amountCents)} was added to your wallet.',
+        );
+        context.go('/wallet');
+      } else {
+        AppNotice.info(
+          context,
+          'Payment is still being confirmed. Return here to check again.',
+        );
       }
+    } on Object catch (error) {
+      if (mounted) AppNotice.error(context, error);
+    } finally {
+      _verifyingPendingPayment = false;
     }
   }
 }

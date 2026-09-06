@@ -1,4 +1,4 @@
-import 'package:flutter/widgets.dart';
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import 'package:go_router/go_router.dart';
@@ -21,7 +21,12 @@ import 'package:fpl_wager/features/pools/presentation/pool_detail_screen.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_screen.dart';
 import 'package:fpl_wager/features/settings/presentation/settings_screen.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_screen.dart';
-import 'package:fpl_wager/features/admin/presentation/admin_screen.dart';
+import 'package:fpl_wager/features/admin/presentation/admin_screen.dart'
+    as admin_dashboard;
+import 'package:fpl_wager/features/admin/presentation/admin_resource_screen.dart'
+    as admin_resource;
+import 'package:fpl_wager/features/admin/presentation/admin_user_screen.dart'
+    as admin_user;
 import 'package:fpl_wager/features/payments/presentation/payment_callback_screen.dart';
 import 'package:fpl_wager/features/payments/presentation/top_up_screen.dart';
 
@@ -52,12 +57,15 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: [
-      GoRoute(path: '/splash', builder: (_, __) => const SplashScreen()),
-      GoRoute(path: '/welcome', builder: (_, __) => const WelcomeScreen()),
-      GoRoute(path: '/sign-in', builder: (_, __) => const SignInScreen()),
-      GoRoute(path: '/sign-up', builder: (_, __) => const SignUpScreen()),
-      GoRoute(path: '/auth/verify', builder: (_, __) => const OtpScreen()),
-      GoRoute(path: '/forgot-password', builder: (_, __) => const ForgotPasswordScreen()),
+      GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
+      GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
+      GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
+      GoRoute(path: '/sign-up', builder: (_, _) => const SignUpScreen()),
+      GoRoute(path: '/auth/verify', builder: (_, _) => const OtpScreen()),
+      GoRoute(
+        path: '/forgot-password',
+        builder: (_, _) => const ForgotPasswordScreen(),
+      ),
       GoRoute(
         path: '/reset-password',
         builder: (_, state) => ResetPasswordScreen(
@@ -118,12 +126,20 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/link-team',
-        builder: (_, __) => const LinkTeamScreen(),
+        pageBuilder: (context, state) => _DialogPage<bool>(
+          key: state.pageKey,
+          child: LinkTeamDialog(
+            reason: state.uri.queryParameters['reason'],
+          ),
+        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/pools/create',
-        builder: (_, __) => const CreatePoolScreen(),
+        pageBuilder: (_, state) => _DialogPage<String>(
+          key: state.pageKey,
+          child: const CreatePoolScreen(),
+        ),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -134,12 +150,12 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/settings',
-        builder: (_, __) => const SettingsScreen(),
+        builder: (_, _) => const SettingsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/wallet/top-up',
-        builder: (_, __) => const TopUpScreen(),
+        builder: (_, _) => const TopUpScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
@@ -153,15 +169,39 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/admin',
-        builder: (_, __) => const AdminScreen(),
+        builder: (_, _) => const admin_dashboard.AdminScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/admin/users/:userId',
-        builder: (_, state) => AdminUserScreen(
+        builder: (_, state) => admin_user.AdminUserScreen(
           userId: state.pathParameters['userId']!,
+        ),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/admin/resources/:resource',
+        builder: (_, state) => admin_resource.AdminResourceScreen(
+          resource: state.pathParameters['resource']!,
         ),
       ),
     ],
   );
 });
+
+class _DialogPage<T> extends Page<T> {
+  const _DialogPage({required this.child, super.key});
+
+  final Widget child;
+
+  @override
+  Route<T> createRoute(BuildContext context) => DialogRoute<T>(
+        context: context,
+        settings: this,
+        barrierDismissible: true,
+        barrierColor: Colors.black.withValues(alpha: 0.62),
+        barrierLabel:
+            MaterialLocalizations.of(context).modalBarrierDismissLabel,
+        builder: (_) => child,
+      );
+}

@@ -1,3 +1,6 @@
+import 'dart:math' as math;
+import 'dart:ui' show FontFeature;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
@@ -144,6 +147,213 @@ class DeadlineCountdown extends ConsumerWidget {
   }
 }
 
+/// A responsive split-flap style countdown driven by Riverpod's clock stream.
+/// Rebuilding is scoped to this widget, so dashboard data is not refetched and
+/// no imperative timer or setState lifecycle is required.
+class FlipDeadlineCountdown extends ConsumerWidget {
+  const FlipDeadlineCountdown(
+    this.deadline, {
+    super.key,
+    this.gameweek,
+  });
+
+  final DateTime deadline;
+  final int? gameweek;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final now = ref.watch(_clockProvider).value ?? DateTime.now();
+    final difference = deadline.difference(now);
+    final remaining = difference.isNegative ? Duration.zero : difference;
+    final units = <({String label, String value})>[
+      (label: 'DAYS', value: remaining.inDays.toString().padLeft(2, '0')),
+      (
+        label: 'HOURS',
+        value: remaining.inHours.remainder(24).toString().padLeft(2, '0'),
+      ),
+      (
+        label: 'MIN',
+        value: remaining.inMinutes.remainder(60).toString().padLeft(2, '0'),
+      ),
+      (
+        label: 'SEC',
+        value: remaining.inSeconds.remainder(60).toString().padLeft(2, '0'),
+      ),
+    ];
+    final localDeadline = deadline.toLocal();
+
+    return Semantics(
+      liveRegion: true,
+      label: difference.isNegative
+          ? 'The gameweek deadline has passed'
+          : '${remaining.inDays} days, ${remaining.inHours.remainder(24)} hours, ${remaining.inMinutes.remainder(60)} minutes and ${remaining.inSeconds.remainder(60)} seconds until the FPL deadline',
+      child: GradientPanel(
+        colors: const [Color(0xFF071F1B), Color(0xFF25143F)],
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF49D7F2).withValues(alpha: 0.14),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: const Icon(
+                    Icons.timer_outlined,
+                    color: Color(0xFF49D7F2),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        gameweek == null
+                            ? 'Official FPL deadline'
+                            : 'Gameweek $gameweek deadline',
+                        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                              color: Colors.white,
+                            ),
+                      ),
+                      Text(
+                        difference.isNegative
+                            ? 'Entries are now locked'
+                            : DateFormat('EEE, d MMM · HH:mm').format(localDeadline),
+                        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFFBBD2CA),
+                            ),
+                      ),
+                    ],
+                  ),
+                ),
+                StatusPill(
+                  difference.isNegative ? 'closed' : 'live',
+                  color: difference.isNegative ? AppColors.danger : AppColors.lime,
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            LayoutBuilder(
+              builder: (context, constraints) {
+                final gap = constraints.maxWidth < 340 ? 5.0 : 8.0;
+                return Row(
+                  children: [
+                    for (var index = 0; index < units.length; index++) ...[
+                      Expanded(
+                        child: _FlipClockUnit(
+                          label: units[index].label,
+                          value: units[index].value,
+                        ),
+                      ),
+                      if (index != units.length - 1) SizedBox(width: gap),
+                    ],
+                  ],
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FlipClockUnit extends StatelessWidget {
+  const _FlipClockUnit({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) => Column(
+        children: [
+          AspectRatio(
+            aspectRatio: 0.86,
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(14),
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  color: const Color(0xFF122B27),
+                  border: Border.all(color: const Color(0xFF4D665F)),
+                  boxShadow: const [
+                    BoxShadow(
+                      color: Color(0x66000000),
+                      blurRadius: 14,
+                      offset: Offset(0, 8),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    const FractionallySizedBox(
+                      heightFactor: 0.5,
+                      alignment: Alignment.topCenter,
+                      child: ColoredBox(color: Color(0xFF193832)),
+                    ),
+                    Center(
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 520),
+                        switchInCurve: Curves.easeOutBack,
+                        switchOutCurve: Curves.easeIn,
+                        transitionBuilder: (child, animation) {
+                          final rotation = Tween<double>(
+                            begin: math.pi / 2,
+                            end: 0,
+                          ).animate(animation);
+                          return AnimatedBuilder(
+                            animation: rotation,
+                            child: child,
+                            builder: (context, child) => Transform(
+                              alignment: Alignment.center,
+                              transform: Matrix4.identity()
+                                ..setEntry(3, 2, 0.001)
+                                ..rotateX(rotation.value),
+                              child: child,
+                            ),
+                          );
+                        },
+                        child: FittedBox(
+                          key: ValueKey(value),
+                          fit: BoxFit.scaleDown,
+                          child: Text(
+                            value,
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 36,
+                              height: 1,
+                              fontWeight: FontWeight.w900,
+                              fontFeatures: [FontFeature.tabularFigures()],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ),
+                    const Align(
+                      alignment: Alignment.center,
+                      child: Divider(height: 1, color: Color(0xFF071713)),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            label,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: const Color(0xFFA9C2B9),
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: 0.8,
+                ),
+          ),
+        ],
+      );
+}
+
 class AsyncContent<T> extends StatelessWidget {
   const AsyncContent({required this.value, required this.data, super.key, this.onRetry});
   final AsyncValue<T> value;
@@ -215,4 +425,3 @@ class FadeSlideIn extends StatelessWidget {
         child: child,
       );
 }
-

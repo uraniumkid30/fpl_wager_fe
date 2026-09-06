@@ -3,7 +3,10 @@ import 'package:fpl_wager/core/errors/app_exception.dart';
 
 class ApiClient {
   ApiClient(String baseUrl)
-      : _dio = Dio(
+      : _baseUri = Uri.parse(
+          baseUrl.replaceFirst(RegExp(r'/+$'), ''),
+        ),
+        _dio = Dio(
           BaseOptions(
             baseUrl: '${baseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1',
             connectTimeout: const Duration(seconds: 8),
@@ -13,6 +16,7 @@ class ApiClient {
         );
 
   final Dio _dio;
+  final Uri _baseUri;
   Future<String?> Function()? _refreshHandler;
 
   void setRefreshHandler(Future<String?> Function() handler) {
@@ -22,13 +26,19 @@ class ApiClient {
   void authorize(String? token) {
     if (token == null) {
       _dio.options.headers.remove('Authorization');
-    } else {
-      _dio.options.headers['Authorization'] = 'Bearer $token';
+      return;
     }
+
+    _dio.options.headers['Authorization'] = 'Bearer $token';
   }
 
-  Future<Map<String, Object?>> get(String path, {Map<String, Object?>? query}) =>
-      _request(() => _dio.get<Object?>(path, queryParameters: query));
+  Future<Map<String, Object?>> get(
+    String path, {
+    Map<String, Object?>? query,
+  }) =>
+      _request(
+        () => _dio.get<Object?>(path, queryParameters: query),
+      );
 
   Future<Map<String, Object?>> post(
     String path, {
@@ -53,46 +63,94 @@ class ApiClient {
     String path, {
     Map<String, Object?>? data,
   }) =>
-      _request(() => _dio.put<Object?>(path, data: data));
+      _request(
+        () => _dio.put<Object?>(path, data: data),
+      );
 
   Future<Map<String, Object?>> patch(
     String path, {
     Map<String, Object?>? data,
-  }) => _request(() => _dio.patch<Object?>(path, data: data));
+  }) =>
+      _request(
+        () => _dio.patch<Object?>(path, data: data),
+      );
 
   Future<Map<String, Object?>> delete(String path) =>
       _request(() => _dio.delete<Object?>(path));
 
+  /// Creates the short-lived, single-use ticket used for WebSocket auth.
+  Future<String> createRealtimeTicket() async {
+    final response = await post('/realtime/ticket');
+    final ticket = response['ticket'];
+
+    if (ticket is! String || ticket.isEmpty) {
+      throw const FormatException(
+        'The server returned an invalid realtime ticket.',
+      );
+    }
+
+    return ticket;
+  }
+
+  /// Converts the configured HTTP API origin to its WebSocket equivalent.
+  ///
+  /// HTTP becomes WS locally, while HTTPS becomes WSS in production.
+  Uri realtimeUri(String ticket) {
+    final websocketScheme = _baseUri.scheme == 'https' ? 'wss' : 'ws';
+    final basePath = _baseUri.path.replaceFirst(RegExp(r'/+$'), '');
+
+    return _baseUri.replace(
+      scheme: websocketScheme,
+      path: '$basePath/v1/realtime',
+      queryParameters: {'ticket': ticket},
+    );
+  }
+
   Future<Map<String, Object?>> _request(
-    Future<Response<Object?>> Function() execute,
-    {bool allowRefresh = true}
-  ) async {
+    Future<Response<Object?>> Function() execute, {
+    bool allowRefresh = true,
+  }) async {
     try {
       final response = await execute();
-      if (response.data == null) return const {};
-      return Map<String, Object?>.from(response.data! as Map<Object?, Object?>);
+      final responseData = response.data;
+
+      if (responseData == null) return const {};
+
+      return Map<String, Object?>.from(
+        responseData as Map<Object?, Object?>,
+      );
     } on DioException catch (error) {
-      if (error.response?.statusCode == 401 && allowRefresh && _refreshHandler != null) {
+      if (error.response?.statusCode == 401 &&
+          allowRefresh &&
+          _refreshHandler != null) {
         final token = await _refreshHandler!();
+
         if (token != null) {
           authorize(token);
           return _request(execute, allowRefresh: false);
         }
       }
-      final data = error.response?.data;
+
+      final responseData = error.response?.data;
       String? code;
-      String message = 'Unable to connect. Please try again.';
-      if (data is Map<Object?, Object?> && data['error'] is Map<Object?, Object?>) {
-        final body = data['error']! as Map<Object?, Object?>;
-        code = body['code'] as String?;
-        message = body['message'] as String? ?? message;
+      var message = 'Unable to connect. Please try again.';
+
+      if (responseData is Map<Object?, Object?> &&
+          responseData['error'] is Map<Object?, Object?>) {
+        final errorBody =
+            responseData['error']! as Map<Object?, Object?>;
+        code = errorBody['code'] as String?;
+        message = errorBody['message'] as String? ?? message;
       }
+
       if (error.response?.statusCode == 401) {
         throw AuthenticationException(message, code: code);
       }
+
       if ((error.response?.statusCode ?? 500) < 500) {
         throw ValidationException(message, code: code);
       }
+
       throw NetworkException(message, code: code);
     }
   }

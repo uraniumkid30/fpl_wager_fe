@@ -1,17 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
+import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/payments/presentation/payment_controller.dart';
 import 'package:go_router/go_router.dart';
 
-class PaymentCallbackScreen extends ConsumerWidget {
+class PaymentCallbackScreen extends ConsumerStatefulWidget {
   const PaymentCallbackScreen({required this.reference, super.key});
   final String reference;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final result = reference.isEmpty ? null : ref.watch(paymentVerificationProvider(reference));
+  ConsumerState<PaymentCallbackScreen> createState() =>
+      _PaymentCallbackScreenState();
+}
+
+class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
+  bool _returnScheduled = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final reference = widget.reference;
+    final provider = paymentVerificationProvider(reference);
+    final result = reference.isEmpty ? null : ref.watch(provider);
+
+    if (reference.isNotEmpty) {
+      ref.listen(provider, (_, next) {
+        final payment = next.value;
+        if (payment?.isSuccessful != true || _returnScheduled) return;
+        _returnScheduled = true;
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
+          AppNotice.success(
+            context,
+            '${money(payment!.amountCents)} was added to your wallet.',
+          );
+          context.go('/wallet');
+        });
+      });
+    }
+
     return Scaffold(
       body: SafeArea(
         child: Center(

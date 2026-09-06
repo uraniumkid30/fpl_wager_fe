@@ -5,8 +5,15 @@ import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:go_router/go_router.dart';
 
 class PoolCard extends StatelessWidget {
-  const PoolCard({required this.pool, super.key});
+  const PoolCard({
+    required this.pool,
+    required this.onJoin,
+    this.joining = false,
+    super.key,
+  });
   final Pool pool;
+  final VoidCallback onJoin;
+  final bool joining;
 
   @override
   Widget build(BuildContext context) {
@@ -38,9 +45,37 @@ class PoolCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Row(children: [const Icon(Icons.timer_outlined, size: 16), const SizedBox(width: 6), DeadlineCountdown(pool.deadline, compact: true)]),
+          const SizedBox(height: 18),
+          SizedBox(
+            width: double.infinity,
+            child: FilledButton.icon(
+              onPressed: pool.canJoin && !joining ? onJoin : null,
+              icon: joining && pool.canJoin
+                  ? const SizedBox.square(
+                      dimension: 18,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : Icon(_actionIcon),
+              label: Text(_actionLabel),
+            ),
+          ),
         ],
       ),
     );
+  }
+
+  String get _actionLabel {
+    if (pool.hasJoined) return 'Joined';
+    if (pool.isPending) return 'Pending approval';
+    if (!pool.canJoin) return 'Pool ${pool.status}';
+    return 'Join pool · ${money(pool.stakeCents)}';
+  }
+
+  IconData get _actionIcon {
+    if (pool.hasJoined) return Icons.check_circle_rounded;
+    if (pool.isPending) return Icons.hourglass_top_rounded;
+    if (!pool.canJoin) return Icons.lock_clock_rounded;
+    return Icons.login_rounded;
   }
 }
 
@@ -49,4 +84,3 @@ class _Value extends StatelessWidget {
   final String label, value; final Color? color;
   @override Widget build(BuildContext context) => Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, letterSpacing: .7)), const SizedBox(height: 3), Text(value, style: Theme.of(context).textTheme.titleLarge?.copyWith(color: color, fontWeight: FontWeight.w900))]);
 }
-

@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class AppConfig {
   const AppConfig._();
 
@@ -16,8 +18,20 @@ class AppConfig {
     defaultValue: false,
   );
 
-  static const paymentCallbackUrl = String.fromEnvironment(
+  static const _configuredPaymentCallbackUrl = String.fromEnvironment(
     'PAYMENT_CALLBACK_URL',
-    defaultValue: 'fplwager://payments/callback',
+    defaultValue: '',
   );
+
+  /// Checkout return URL sent to the payment provider.
+  ///
+  /// Web defaults to the current origin and GoRouter's hash route. Production
+  /// can override this with `--dart-define=PAYMENT_CALLBACK_URL=...`.
+  static String get paymentCallbackUrl {
+    if (_configuredPaymentCallbackUrl.isNotEmpty) {
+      return _configuredPaymentCallbackUrl;
+    }
+    if (kIsWeb) return '${Uri.base.origin}/#/payments/callback';
+    return 'fplwager:///payments/callback';
+  }
 }

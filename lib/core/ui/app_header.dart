@@ -1,12 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
+import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
-  const AppHeader({super.key, this.title});
+  const AppHeader({super.key, this.title, this.actions = const []});
   final String? title;
+  final List<Widget> actions;
 
   @override
   Size get preferredSize => const Size.fromHeight(68);
@@ -14,9 +16,11 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final wallet = ref.watch(walletProvider).value;
+    final isAdmin = ref.watch(authControllerProvider).value?.user.isAdmin ?? false;
     return AppBar(
       title: title == null ? const BrandMark(compact: true) : Text(title!),
       actions: [
+        ...actions,
         if (wallet != null)
           Padding(
             padding: const EdgeInsets.only(right: 4),
@@ -25,6 +29,12 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
               label: Text(money(wallet.availableCents)),
               onPressed: () => context.go('/wallet'),
             ),
+          ),
+        if (isAdmin)
+          IconButton(
+            tooltip: 'Administration',
+            onPressed: () => context.push('/admin'),
+            icon: const Icon(Icons.admin_panel_settings_outlined),
           ),
         IconButton(
           tooltip: 'Settings',
@@ -36,4 +46,3 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
     );
   }
 }
-

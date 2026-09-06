@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/config/app_config.dart';
+import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_header.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
@@ -69,7 +70,10 @@ class WalletScreen extends ConsumerWidget {
                       children: [
                         Expanded(
                           child: FilledButton(
-                            onPressed: () => context.push('/wallet/top-up'),
+                            onPressed: () async {
+                              await context.push('/wallet/top-up');
+                              ref.invalidate(walletProvider);
+                            },
                             child: const Text('Top up'),
                           ),
                         ),
@@ -77,12 +81,9 @@ class WalletScreen extends ConsumerWidget {
                         Expanded(
                           child: OutlinedButton(
                             onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Withdrawals require payment-provider onboarding.',
-                                  ),
-                                ),
+                              AppNotice.info(
+                                context,
+                                'Withdrawals require payment-provider onboarding.',
                               );
                             },
                             style: OutlinedButton.styleFrom(
@@ -175,9 +176,14 @@ class WalletScreen extends ConsumerWidget {
     final ok = await ref.read(walletActionProvider.notifier).credit(amount);
     if (!context.mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(ok ? 'Wallet credited' : 'Top up failed')),
-    );
+    if (ok) {
+      AppNotice.success(context, 'Wallet credited successfully.');
+    } else {
+      AppNotice.error(
+        context,
+        ref.read(walletActionProvider).error ?? 'Top up failed.',
+      );
+    }
   }
 }
 

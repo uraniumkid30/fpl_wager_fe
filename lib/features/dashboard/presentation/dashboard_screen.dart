@@ -97,23 +97,53 @@ class _Metrics extends StatelessWidget {
   Widget build(BuildContext context) => LayoutBuilder(
         builder: (context, constraints) {
           final wide = constraints.maxWidth > 540;
-          final cards = [
+          final cards = <Widget>[
             _Metric(icon: Icons.account_balance_wallet_outlined, label: 'Available balance', value: money(value.wallet.availableCents), accent: AppColors.purple),
             _Metric(icon: Icons.bolt_rounded, label: 'Active wagers', value: '${value.activeWagers}', accent: AppColors.lime),
-            _Metric(icon: Icons.timer_outlined, label: 'FPL deadline', countdown: value.deadline, value: value.deadline == null ? 'Not set' : '', accent: const Color(0xFF49D7F2)),
           ];
-          if (wide) return Row(crossAxisAlignment: CrossAxisAlignment.start, children: cards.map((item) => Expanded(child: Padding(padding: const EdgeInsets.only(right: 10), child: item))).toList());
-          return Column(children: cards.map((item) => Padding(padding: const EdgeInsets.only(bottom: 12), child: item)).toList());
+          return Column(
+            children: [
+              if (wide)
+                Row(
+                  children: cards
+                      .map((item) => Expanded(
+                            child: Padding(
+                              padding: const EdgeInsets.only(right: 10),
+                              child: item,
+                            ),
+                          ))
+                      .toList(),
+                )
+              else
+                ...cards.map((item) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: item,
+                    )),
+              if (wide) const SizedBox(height: 14),
+              if (value.deadline == null)
+                const _Metric(
+                  icon: Icons.timer_outlined,
+                  label: 'FPL deadline',
+                  value: 'Schedule syncing',
+                  accent: Color(0xFF49D7F2),
+                )
+              else
+                FlipDeadlineCountdown(
+                  value.deadline!,
+                  gameweek: value.currentGameweek,
+                ),
+            ],
+          );
         },
       );
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.icon, required this.label, required this.value, required this.accent, this.countdown});
-  final IconData icon; final String label; final String value; final Color accent; final DateTime? countdown;
+  const _Metric({required this.icon, required this.label, required this.value, required this.accent});
+  final IconData icon; final String label; final String value; final Color accent;
   @override
   Widget build(BuildContext context) => GradientPanel(
-        child: Row(children: [Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(15)), child: Icon(icon, color: accent)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 5), countdown == null ? Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: accent)) : DeadlineCountdown(countdown!)]))]),
+        child: Row(children: [Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(15)), child: Icon(icon, color: accent)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 5), Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: accent))]))]),
       );
 }
 
@@ -132,4 +162,3 @@ class _Principle extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Padding(padding: const EdgeInsets.symmetric(vertical: 8), child: Row(children: [Container(padding: const EdgeInsets.all(11), decoration: BoxDecoration(color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.12), borderRadius: BorderRadius.circular(14)), child: Icon(icon, color: Theme.of(context).colorScheme.primary)), const SizedBox(width: 14), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(title, style: Theme.of(context).textTheme.titleMedium), Text(body, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))]))]));
 }
-
