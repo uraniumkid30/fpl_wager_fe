@@ -7,6 +7,7 @@ import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/settings/domain/app_settings.dart';
 import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
 import 'package:fpl_wager/features/payments/domain/payment.dart';
+import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
 import 'package:uuid/uuid.dart';
 
 class DemoGateway implements AppGateway {
@@ -21,11 +22,13 @@ class DemoGateway implements AppGateway {
     LedgerEntry(id: 'l3', kind: 'top_up', description: 'Top up', amountCents: 200000, createdAt: DateTime.now().subtract(const Duration(days: 3))),
   ];
   final List<Pool> _pools = [
-    Pool(id: 'pool-1', name: 'GW2 · ₦1,000 pool', gameweek: 2, stakeCents: 100000, prizePoolCents: 285000, status: 'open', memberCount: 3, deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), membershipStatus: 'active'),
-    Pool(id: 'pool-2', name: 'GW2 · ₦2,000 pool', gameweek: 2, stakeCents: 200000, prizePoolCents: 380000, status: 'open', memberCount: 2, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
-    Pool(id: 'pool-3', name: 'Chris pool', gameweek: 2, stakeCents: 50000, prizePoolCents: 100000, status: 'open', memberCount: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), membershipStatus: 'pending', approvalRequired: true),
+    Pool(id: 'auto-1000', name: 'GW2 Auto Pool · ₦1,000', gameweek: 2, stakeCents: 100000, prizePoolCents: 285000, status: 'open', memberCount: 3, maxMembers: 10000, poolKind: 'auto', drawMethod: PoolDrawMethod.split, autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), membershipStatus: 'active'),
+    Pool(id: 'auto-2000', name: 'GW2 Auto Pool · ₦2,000', gameweek: 2, stakeCents: 200000, prizePoolCents: 380000, status: 'open', memberCount: 2, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
+    Pool(id: 'auto-5000', name: 'GW2 Auto Pool · ₦5,000', gameweek: 2, stakeCents: 500000, prizePoolCents: 0, status: 'open', memberCount: 0, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
+    Pool(id: 'pool-3', name: 'Chris pool', gameweek: 2, stakeCents: 100000, prizePoolCents: 0, status: 'draft', memberCount: 0, rules: 'Highest score in the gameweek wins.', deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), approvalRequired: true),
   ];
   final List<Challenge> _challenges = [];
+  final List<AppNotification> _notifications = [];
 
   Future<void> _wait() => Future<void>.delayed(const Duration(milliseconds: 350));
   UserProfile _user(String email, [String name = 'Dean Miles']) => UserProfile(id: 'demo-user', fullName: name, email: email);
@@ -41,6 +44,8 @@ class DemoGateway implements AppGateway {
   Future<VerificationChallenge> requestRegistration({required String fullName, required String email, required String phone, required String password}) async { await _wait(); return const VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/auth/register/verify', expiresInSeconds: 600); }
   @override
   Future<AuthSession> verifyRegistration(String email, String otp) async { await _wait(); return _session = _newSession(_user(email)); }
+  @override
+  Future<AuthSession> continueWithFpl({required String refreshToken, int? entryId}) async { await _wait(); return _session = _newSession(_user('demo-manager@fplwager.local', 'Demo Manager')); }
   @override
   Future<void> requestPasswordReset(String email) async { await _wait(); }
   @override
@@ -59,13 +64,17 @@ class DemoGateway implements AppGateway {
   @override
   Future<List<Pool>> pools({int? gameweek}) async { await _wait(); return _pools.where((p) => gameweek == null || p.gameweek == gameweek).toList(); }
   @override
-  Future<Pool> pool(String id) async { await _wait(); final item = _pools.firstWhere((p) => p.id == id); return Pool(id: item.id, name: item.name, gameweek: item.gameweek, stakeCents: item.stakeCents, prizePoolCents: item.prizePoolCents, status: item.status, memberCount: item.memberCount, deadline: item.deadline, membershipStatus: item.membershipStatus, approvalRequired: item.approvalRequired, leaderboard: const [PoolMember(displayName: 'Olawale Mosuro', rank: 1, points: 0), PoolMember(displayName: 'Chuks Paul', rank: 2, points: 0), PoolMember(displayName: 'Dean Miles (you)', rank: 3, points: 0)], prizeSplit: [Prize(place: 1, amountCents: item.prizePoolCents, percent: 100)]); }
+  Future<Pool> pool(String id) async { await _wait(); final item = _pools.firstWhere((p) => p.id == id); return _copyPool(item, leaderboard: const [PoolMember(displayName: 'Olawale Mosuro', rank: 1, points: 0), PoolMember(displayName: 'Chuks Paul', rank: 2, points: 0), PoolMember(displayName: 'Dean Miles (you)', rank: 3, points: 0)], prizeSplit: [Prize(place: 1, amountCents: item.prizePoolCents, percent: 100)]); }
   @override
-  Future<Pool> createPool(CreatePoolCommand command) async { await _wait(); final item = Pool(id: _uuid.v4(), name: command.name, gameweek: command.gameweek, stakeCents: command.stakeCents, prizePoolCents: command.stakeCents, status: 'open', memberCount: 1, deadline: DateTime.now().add(const Duration(days: 4)), membershipStatus: 'active', approvalRequired: command.approvalRequired); _pools.insert(0, item); _balance -= command.stakeCents; return item; }
+  Future<Pool> createPool(CreatePoolCommand command) async { await _wait(); final item = Pool(id: _uuid.v4(), name: command.name, gameweek: command.gameweek, stakeCents: command.stakeCents, prizePoolCents: 0, status: 'draft', memberCount: 0, deadline: DateTime.now().add(const Duration(days: 4)), rules: command.rules, drawMethod: command.drawMethod, approvalRequired: command.approvalRequired); _pools.add(item); return item; }
   @override
-  Future<Pool> joinPool(String id) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; final status = old.approvalRequired ? 'pending' : 'active'; final updated = Pool(id: old.id, name: old.name, gameweek: old.gameweek, stakeCents: old.stakeCents, prizePoolCents: old.prizePoolCents + old.stakeCents, status: old.status, memberCount: old.memberCount + 1, deadline: old.deadline, membershipStatus: status, approvalRequired: old.approvalRequired); _pools[index] = updated; _balance -= old.stakeCents; return updated; }
+  Future<Pool> joinPool(String id) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; final status = old.approvalRequired ? 'pending' : 'active'; final updated = _copyPool(old, prizePoolCents: old.prizePoolCents + old.stakeCents, memberCount: old.memberCount + 1, membershipStatus: status); _pools[index] = updated; _balance -= old.stakeCents; return updated; }
   @override
-  Future<Pool> leavePool(String id) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; final updated = Pool(id: old.id, name: old.name, gameweek: old.gameweek, stakeCents: old.stakeCents, prizePoolCents: old.prizePoolCents - old.stakeCents, status: old.status, memberCount: old.memberCount - 1, deadline: old.deadline, approvalRequired: old.approvalRequired); _pools[index] = updated; _balance += old.stakeCents; return updated; }
+  Future<Pool> leavePool(String id) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; final updated = _copyPool(old, prizePoolCents: old.prizePoolCents - old.stakeCents, memberCount: old.memberCount - 1, clearMembership: true); _pools[index] = updated; _balance += old.stakeCents; return updated; }
+  @override
+  Future<List<AppNotification>> notifications() async { await _wait(); return List.unmodifiable(_notifications); }
+  @override
+  Future<void> markNotificationRead(String id) async { await _wait(); }
   @override
   Future<List<Challenge>> challenges() async { await _wait(); return List.unmodifiable(_challenges); }
   @override
@@ -81,3 +90,34 @@ class DemoGateway implements AppGateway {
   @override
   Future<AppSettings> updateSettings(AppSettings settings) async { await _wait(); return _settings = settings; }
 }
+
+Pool _copyPool(
+  Pool source, {
+  int? prizePoolCents,
+  int? memberCount,
+  String? membershipStatus,
+  bool clearMembership = false,
+  List<PoolMember>? leaderboard,
+  List<Prize>? prizeSplit,
+}) =>
+    Pool(
+      id: source.id,
+      name: source.name,
+      gameweek: source.gameweek,
+      stakeCents: source.stakeCents,
+      prizePoolCents: prizePoolCents ?? source.prizePoolCents,
+      status: source.status,
+      memberCount: memberCount ?? source.memberCount,
+      deadline: source.deadline,
+      membershipStatus:
+          clearMembership ? null : membershipStatus ?? source.membershipStatus,
+      approvalRequired: source.approvalRequired,
+      poolKind: source.poolKind,
+      rules: source.rules,
+      drawMethod: source.drawMethod,
+      inviteCode: source.inviteCode,
+      maxMembers: source.maxMembers,
+      autoSeriesNo: source.autoSeriesNo,
+      leaderboard: leaderboard ?? source.leaderboard,
+      prizeSplit: prizeSplit ?? source.prizeSplit,
+    );

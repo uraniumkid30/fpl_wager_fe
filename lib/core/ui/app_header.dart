@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fpl_wager/features/notifications/presentation/notifications_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
@@ -17,6 +18,7 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final wallet = ref.watch(walletProvider).value;
     final isAdmin = ref.watch(authControllerProvider).value?.user.isAdmin ?? false;
+    final unreadNotifications = ref.watch(unreadNotificationCountProvider);
     return AppBar(
       title: title == null ? const BrandMark(compact: true) : Text(title!),
       actions: [
@@ -36,6 +38,15 @@ class AppHeader extends ConsumerWidget implements PreferredSizeWidget {
             onPressed: () => context.push('/admin'),
             icon: const Icon(Icons.admin_panel_settings_outlined),
           ),
+        Badge(
+          isLabelVisible: unreadNotifications > 0,
+          label: Text(unreadNotifications > 99 ? '99+' : '$unreadNotifications'),
+          child: IconButton(
+            tooltip: 'Notifications',
+            onPressed: () => context.push('/notifications'),
+            icon: const Icon(Icons.notifications_outlined),
+          ),
+        ),
         IconButton(
           tooltip: 'Settings',
           onPressed: () => context.push('/settings'),

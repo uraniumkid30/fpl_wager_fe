@@ -83,7 +83,7 @@ class _AdminHero extends StatelessWidget {
           ),
           const SizedBox(width: 16),
           Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-            Text('FPLWager operations', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+            Text('FPLwager operations', style: Theme.of(context).textTheme.headlineSmall?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
             const SizedBox(height: 4),
             const Text('Monitor money movement, account safety and every active gameweek.', style: TextStyle(color: Color(0xFFC8DDD5))),
           ])),

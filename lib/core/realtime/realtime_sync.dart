@@ -13,6 +13,7 @@ import 'package:fpl_wager/features/challenges/presentation/challenges_controller
 import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fpl_wager/features/notifications/presentation/notifications_controller.dart';
 
 /// Keeps server-owned read models fresh without putting JWTs in WebSocket URLs.
 /// The HTTP client first obtains a short-lived, single-use connection ticket.
@@ -59,6 +60,9 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
   }
   if (resources.contains('account')) {
     ref.invalidate(adminCollectionProvider('users'));
+  }
+  if (resources.contains('notifications')) {
+    ref.invalidate(notificationsProvider);
   }
 }
 

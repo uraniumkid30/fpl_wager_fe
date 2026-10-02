@@ -14,11 +14,13 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   final _formKey = GlobalKey<FormState>();
   final _email = TextEditingController();
   final _password = TextEditingController();
+  final _passwordVisible = ValueNotifier<bool>(false);
 
   @override
   void dispose() {
     _email.dispose();
     _password.dispose();
+    _passwordVisible.dispose();
     super.dispose();
   }
 
@@ -42,12 +44,23 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
               validator: validateEmail,
             ),
             const SizedBox(height: 14),
-            TextFormField(
-              controller: _password,
-              obscureText: true,
-              autofillHints: const [AutofillHints.password],
-              decoration: const InputDecoration(labelText: 'Password', prefixIcon: Icon(Icons.lock_outline_rounded)),
-              validator: (value) => value == null || value.isEmpty ? 'Enter your password' : null,
+            ValueListenableBuilder<bool>(
+              valueListenable: _passwordVisible,
+              builder: (context, visible, _) => TextFormField(
+                controller: _password,
+                obscureText: !visible,
+                autofillHints: const [AutofillHints.password],
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  suffixIcon: IconButton(
+                    tooltip: visible ? 'Hide password' : 'Show password',
+                    onPressed: () => _passwordVisible.value = !visible,
+                    icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                  ),
+                ),
+                validator: (value) => value == null || value.isEmpty ? 'Enter your password' : null,
+              ),
             ),
             Align(
               alignment: Alignment.centerRight,

@@ -11,17 +11,20 @@ import 'package:go_router/go_router.dart';
 
 class CreatePoolDraft {
   const CreatePoolDraft({
-    this.stakeCents = 100000,
     this.approvalRequired = false,
+    this.drawMethod = PoolDrawMethod.split,
   });
 
-  final int stakeCents;
   final bool approvalRequired;
+  final PoolDrawMethod drawMethod;
 
-  CreatePoolDraft copyWith({int? stakeCents, bool? approvalRequired}) =>
+  CreatePoolDraft copyWith({
+    bool? approvalRequired,
+    PoolDrawMethod? drawMethod,
+  }) =>
       CreatePoolDraft(
-        stakeCents: stakeCents ?? this.stakeCents,
         approvalRequired: approvalRequired ?? this.approvalRequired,
+        drawMethod: drawMethod ?? this.drawMethod,
       );
 }
 
@@ -34,9 +37,11 @@ class CreatePoolDraftController extends Notifier<CreatePoolDraft> {
   @override
   CreatePoolDraft build() => const CreatePoolDraft();
 
-  void selectStake(int value) => state = state.copyWith(stakeCents: value);
   void setApprovalRequired(bool value) =>
       state = state.copyWith(approvalRequired: value);
+
+  void setDrawMethod(PoolDrawMethod value) =>
+      state = state.copyWith(drawMethod: value);
 }
 
 class CreatePoolScreen extends ConsumerStatefulWidget {
@@ -49,11 +54,15 @@ class CreatePoolScreen extends ConsumerStatefulWidget {
 class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
+  final _stakeNaira = TextEditingController();
+  final _rules = TextEditingController();
   final _maxMembers = TextEditingController();
 
   @override
   void dispose() {
     _name.dispose();
+    _stakeNaira.dispose();
+    _rules.dispose();
     _maxMembers.dispose();
     super.dispose();
   }
@@ -86,12 +95,12 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Create a gameweek pool',
+                            'Create a custom pool',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Set the entry rules and invite managers.',
+                            'Submit the amount and rules for admin approval.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
@@ -124,7 +133,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Your rules. One clean pool.',
+                      'Your custom pool, reviewed first.',
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall
@@ -161,20 +170,95 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 10),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [50000, 100000, 200000, 500000]
+              TextFormField(
+                controller: _stakeNaira,
+                keyboardType: TextInputType.number,
+                decoration: const InputDecoration(
+                  labelText: 'Amount (₦)',
+                  hintText: 'Minimum ₦1,000',
+                  prefixIcon: Icon(Icons.payments_outlined),
+                ),
+                validator: (value) {
+                  final amount = int.tryParse((value ?? '').replaceAll(',', '').trim());
+                  if (amount == null) return 'Enter a whole amount in naira';
+                  if (amount < 1000) return 'The minimum amount is ₦1,000';
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              TextFormField(
+                controller: _rules,
+                minLines: 3,
+                maxLines: 6,
+                textCapitalization: TextCapitalization.sentences,
+                decoration: const InputDecoration(
+                  labelText: 'Pool rules',
+                  hintText: 'Explain who can join, how the winner is decided, and any special conditions.',
+                  alignLabelWithHint: true,
+                ),
+                validator: (value) => (value?.trim().length ?? 0) < 10
+                    ? 'Describe the pool rules in at least 10 characters'
+                    : null,
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'How should a draw be settled?',
+                style: Theme.of(context).textTheme.titleMedium,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                'Choose what happens when two or more managers finish on the same score.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
+              const SizedBox(height: 12),
+              SegmentedButton<PoolDrawMethod>(
+                segments: PoolDrawMethod.values
                     .map(
-                      (value) => ChoiceChip(
-                        label: Text(money(value)),
-                        selected: draft.stakeCents == value,
-                        onSelected: (_) => ref
-                            .read(createPoolDraftProvider.notifier)
-                            .selectStake(value),
+                      (method) => ButtonSegment<PoolDrawMethod>(
+                        value: method,
+                        label: Text(method.label),
                       ),
                     )
                     .toList(),
+                selected: {draft.drawMethod},
+                showSelectedIcon: false,
+                onSelectionChanged: action.isLoading
+                    ? null
+                    : (selection) => ref
+                        .read(createPoolDraftProvider.notifier)
+                        .setDrawMethod(selection.single),
+              ),
+              const SizedBox(height: 10),
+              AnimatedSwitcher(
+                duration: const Duration(milliseconds: 220),
+                child: Container(
+                  key: ValueKey(draft.drawMethod),
+                  padding: const EdgeInsets.all(14),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context)
+                        .colorScheme
+                        .primaryContainer
+                        .withValues(alpha: 0.45),
+                    borderRadius: BorderRadius.circular(14),
+                  ),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(
+                        draft.drawMethod == PoolDrawMethod.split
+                            ? Icons.call_split_rounded
+                            : draft.drawMethod == PoolDrawMethod.captains
+                                ? Icons.workspace_premium_outlined
+                                : Icons.numbers_rounded,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(child: Text(draft.drawMethod.description)),
+                    ],
+                  ),
+                ),
               ),
               const SizedBox(height: 20),
               TextFormField(
@@ -215,12 +299,12 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                     : Text(
                         gameweek == null
                             ? 'Syncing gameweek…'
-                            : 'Create pool · ${money(draft.stakeCents)}',
+                            : 'Submit for approval',
                       ),
               ),
               const SizedBox(height: 10),
               Text(
-                'Your stake is locked when the pool is created and refunded if the pool is cancelled.',
+                'No funds are locked while the pool is awaiting approval. We will notify you in the app and by email when it is approved.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -251,11 +335,14 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
     );
     if (!linked || !mounted) return;
 
+    final amountNaira = int.parse(_stakeNaira.text.replaceAll(',', '').trim());
     final pool = await ref.read(poolActionProvider.notifier).create(
           CreatePoolCommand(
             name: _name.text.trim(),
             gameweek: gameweek,
-            stakeCents: draft.stakeCents,
+            stakeCents: amountNaira * 100,
+            rules: _rules.text.trim(),
+            drawMethod: draft.drawMethod,
             approvalRequired: draft.approvalRequired,
             maxMembers: int.tryParse(_maxMembers.text),
           ),
@@ -269,7 +356,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
       return;
     }
 
-    AppNotice.success(context, '${pool.name} was created successfully.');
-    context.pop(pool.id);
+    AppNotice.success(context, '${pool.name} was submitted for admin approval.');
+    context.pop(true);
   }
 }

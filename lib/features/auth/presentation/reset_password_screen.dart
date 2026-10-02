@@ -18,11 +18,15 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
   final _formKey = GlobalKey<FormState>();
   final _password = TextEditingController();
   final _confirmation = TextEditingController();
+  final _passwordVisible = ValueNotifier<bool>(false);
+  final _confirmationVisible = ValueNotifier<bool>(false);
 
   @override
   void dispose() {
     _password.dispose();
     _confirmation.dispose();
+    _passwordVisible.dispose();
+    _confirmationVisible.dispose();
     super.dispose();
   }
 
@@ -43,19 +47,41 @@ class _ResetPasswordScreenState extends ConsumerState<ResetPasswordScreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  TextFormField(
-                    controller: _password,
-                    obscureText: true,
-                    autofillHints: const [AutofillHints.newPassword],
-                    decoration: const InputDecoration(labelText: 'New password', prefixIcon: Icon(Icons.lock_outline_rounded)),
-                    validator: (value) => (value?.length ?? 0) < 10 ? 'Use at least 10 characters' : null,
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _passwordVisible,
+                    builder: (context, visible, _) => TextFormField(
+                      controller: _password,
+                      obscureText: !visible,
+                      autofillHints: const [AutofillHints.newPassword],
+                      decoration: InputDecoration(
+                        labelText: 'New password',
+                        prefixIcon: const Icon(Icons.lock_outline_rounded),
+                        suffixIcon: IconButton(
+                          tooltip: visible ? 'Hide password' : 'Show password',
+                          onPressed: () => _passwordVisible.value = !visible,
+                          icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                        ),
+                      ),
+                      validator: (value) => (value?.length ?? 0) < 10 ? 'Use at least 10 characters' : null,
+                    ),
                   ),
                   const SizedBox(height: 14),
-                  TextFormField(
-                    controller: _confirmation,
-                    obscureText: true,
-                    decoration: const InputDecoration(labelText: 'Confirm password', prefixIcon: Icon(Icons.verified_outlined)),
-                    validator: (value) => value != _password.text ? 'Passwords do not match' : null,
+                  ValueListenableBuilder<bool>(
+                    valueListenable: _confirmationVisible,
+                    builder: (context, visible, _) => TextFormField(
+                      controller: _confirmation,
+                      obscureText: !visible,
+                      decoration: InputDecoration(
+                        labelText: 'Confirm password',
+                        prefixIcon: const Icon(Icons.verified_outlined),
+                        suffixIcon: IconButton(
+                          tooltip: visible ? 'Hide password' : 'Show password',
+                          onPressed: () => _confirmationVisible.value = !visible,
+                          icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                        ),
+                      ),
+                      validator: (value) => value != _password.text ? 'Passwords do not match' : null,
+                    ),
                   ),
                   const SizedBox(height: 20),
                   if (flow.error != null) ...[

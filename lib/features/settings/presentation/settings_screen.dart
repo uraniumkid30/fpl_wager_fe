@@ -89,7 +89,7 @@ class SettingsScreen extends ConsumerWidget {
               label: const Text('Sign out'),
             ),
             const SizedBox(height: 12),
-            Text('FPLWager is not affiliated with the Premier League. 18+ · Play responsibly.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+            Text('FPLwager is not affiliated with the Premier League. 18+ · Play responsibly.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
           ],
         ),
       ),

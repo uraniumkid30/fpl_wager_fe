@@ -9,6 +9,7 @@ import 'package:fpl_wager/features/auth/presentation/sign_in_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/sign_up_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/splash_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/welcome_screen.dart';
+import 'package:fpl_wager/features/auth/presentation/fpl_login_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/forgot_password_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/otp_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/reset_password_screen.dart';
@@ -29,6 +30,7 @@ import 'package:fpl_wager/features/admin/presentation/admin_user_screen.dart'
     as admin_user;
 import 'package:fpl_wager/features/payments/presentation/payment_callback_screen.dart';
 import 'package:fpl_wager/features/payments/presentation/top_up_screen.dart';
+import 'package:fpl_wager/features/notifications/presentation/notifications_screen.dart';
 
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
@@ -43,13 +45,18 @@ final routerProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final public =
           location == '/welcome' ||
+          location == '/fpl-login' ||
           location == '/sign-in' ||
           location == '/sign-up' ||
           location == '/auth/verify' ||
           location == '/forgot-password' ||
           location == '/reset-password';
       if (auth.isLoading) return location == '/splash' ? null : '/splash';
-      if (!signedIn) return public ? null : '/welcome';
+      // '/fpl-login' is now the primary, and effectively only intended,
+      // entry point — see welcome_screen.dart. '/sign-in' and '/sign-up'
+      // stay reachable (not deleted) for now; decide whether to remove them
+      // once this path is verified end to end.
+      if (!signedIn) return public ? null : '/fpl-login';
       if (public || location == '/splash') return '/dashboard';
       if (location.startsWith('/admin') && !(auth.value?.user.isAdmin ?? false)) {
         return '/dashboard';
@@ -59,6 +66,7 @@ final routerProvider = Provider<GoRouter>((ref) {
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
+      GoRoute(path: '/fpl-login', builder: (_, _) => const FplLoginScreen()),
       GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
       GoRoute(path: '/sign-up', builder: (_, _) => const SignUpScreen()),
       GoRoute(path: '/auth/verify', builder: (_, _) => const OtpScreen()),
@@ -136,7 +144,7 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/pools/create',
-        pageBuilder: (_, state) => _DialogPage<String>(
+        pageBuilder: (_, state) => _DialogPage<bool>(
           key: state.pageKey,
           child: const CreatePoolScreen(),
         ),
@@ -146,6 +154,11 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/pools/:poolId',
         builder: (_, state) =>
             PoolDetailScreen(poolId: state.pathParameters['poolId']!),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/notifications',
+        builder: (_, _) => const NotificationsScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

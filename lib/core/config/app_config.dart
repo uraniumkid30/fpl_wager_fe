@@ -5,7 +5,7 @@ class AppConfig {
 
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://127.0.0.1:8080',
+    defaultValue: 'http://35.217.63.208',//http://127.0.0.1:8080
   );
 
   static const useDemoData = bool.fromEnvironment(

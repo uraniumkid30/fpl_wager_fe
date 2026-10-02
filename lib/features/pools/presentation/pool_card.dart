@@ -17,7 +17,13 @@ class PoolCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final membership = pool.isPending ? 'Pending approval' : pool.hasJoined ? 'Joined' : pool.status;
+    final membership = pool.awaitingAdminApproval
+        ? 'Awaiting admin approval'
+        : pool.isPending
+            ? 'Pending approval'
+            : pool.hasJoined
+                ? 'Joined'
+                : pool.status;
     return GradientPanel(
       onTap: () => context.push('/pools/${pool.id}'),
       child: Column(
@@ -25,11 +31,23 @@ class PoolCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              StatusPill(membership, color: pool.isPending ? Colors.orange : null),
+              StatusPill(
+                membership,
+                color: pool.awaitingAdminApproval || pool.isPending
+                    ? Colors.orange
+                    : null,
+              ),
               const Spacer(),
+              if (pool.isAuto) ...[
+                const Icon(Icons.autorenew_rounded, size: 17, color: AppColors.lime),
+                const SizedBox(width: 5),
+                Text('AUTO', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: AppColors.lime, fontWeight: FontWeight.w900)),
+                const SizedBox(width: 10),
+              ],
               Icon(Icons.groups_2_outlined, size: 17, color: Theme.of(context).colorScheme.onSurfaceVariant),
               const SizedBox(width: 5),
               Text('${pool.memberCount}', style: Theme.of(context).textTheme.labelLarge),
+              if (pool.maxMembers != null) Text(' / ${pool.maxMembers}', style: Theme.of(context).textTheme.labelSmall),
             ],
           ),
           const SizedBox(height: 18),
@@ -45,6 +63,17 @@ class PoolCard extends StatelessWidget {
           ),
           const SizedBox(height: 14),
           Row(children: [const Icon(Icons.timer_outlined, size: 16), const SizedBox(width: 6), DeadlineCountdown(pool.deadline, compact: true)]),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              const Icon(Icons.balance_rounded, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                'Draw: ${pool.drawMethod.label}',
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
+            ],
+          ),
           const SizedBox(height: 18),
           SizedBox(
             width: double.infinity,
@@ -66,6 +95,7 @@ class PoolCard extends StatelessWidget {
 
   String get _actionLabel {
     if (pool.hasJoined) return 'Joined';
+    if (pool.awaitingAdminApproval) return 'Awaiting admin approval';
     if (pool.isPending) return 'Pending approval';
     if (!pool.canJoin) return 'Pool ${pool.status}';
     return 'Join pool · ${money(pool.stakeCents)}';

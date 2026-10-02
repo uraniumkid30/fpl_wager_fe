@@ -57,18 +57,24 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
-                  FilledButton(
-                    onPressed: () => context.go('/sign-up'),
-                    child: const Text('Create your account'),
+                  FilledButton.icon(
+                    onPressed: () => context.go('/fpl-login'),
+                    icon: const Icon(Icons.sports_soccer_rounded),
+                    label: const Text('Continue with FPL'),
                   ),
-                  const SizedBox(height: 12),
-                  OutlinedButton(
-                    onPressed: () => context.go('/sign-in'),
-                    child: const Text('I already play'),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Sign in with your real FPL account. We open the official '
+                    'Fantasy Premier League login — your password is typed '
+                    'directly into their page, never ours.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
                   ),
                   const SizedBox(height: 12),
                   Text(
-                    '18+ · Play responsibly · Secure payments via Paystack or Korapay',
+                    '18+ · Play responsibly',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),

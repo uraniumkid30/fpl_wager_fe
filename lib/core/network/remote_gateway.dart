@@ -10,6 +10,7 @@ import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/settings/domain/app_settings.dart';
 import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
 import 'package:fpl_wager/features/payments/domain/payment.dart';
+import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
 import 'package:uuid/uuid.dart';
 
 class RemoteGateway implements AppGateway {
@@ -57,6 +58,21 @@ class RemoteGateway implements AppGateway {
           '/auth/login/verify',
           allowRefresh: false,
           data: {'email': email, 'otp': otp},
+        ),
+      );
+
+  @override
+  Future<AuthSession> continueWithFpl({
+    required String refreshToken,
+    int? entryId,
+  }) async => _saveTokenResponse(
+        await _client.post(
+          '/auth/fpl',
+          allowRefresh: false,
+          data: {
+            'refresh_token': refreshToken,
+            if (entryId != null) 'entry_id': entryId,
+          },
         ),
       );
 
@@ -215,6 +231,8 @@ class RemoteGateway implements AppGateway {
             'name': command.name,
             'gameweek': command.gameweek,
             'stake_cents': command.stakeCents,
+            'rules': command.rules,
+            'draw_method': command.drawMethod.wireValue,
             'visibility': 'public',
             'approval_required': command.approvalRequired,
             'max_members': command.maxMembers,
@@ -231,6 +249,17 @@ class RemoteGateway implements AppGateway {
   Future<Pool> leavePool(String id) async => Pool.fromJson(
         await _client.post('/pools/$id/leave', idempotencyKey: _uuid.v4()),
       );
+
+  @override
+  Future<List<AppNotification>> notifications() async {
+    final body = await _client.get('/notifications');
+    return _list(body, 'items').map(AppNotification.fromJson).toList();
+  }
+
+  @override
+  Future<void> markNotificationRead(String id) async {
+    await _client.patch('/notifications/$id/read');
+  }
 
   @override
   Future<List<Challenge>> challenges() async {

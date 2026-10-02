@@ -6,11 +6,20 @@ import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/settings/domain/app_settings.dart';
 import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
 import 'package:fpl_wager/features/payments/domain/payment.dart';
+import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
 
 abstract interface class AppGateway {
   Future<AuthSession?> restoreSession();
   Future<VerificationChallenge> requestLogin(String email, String password);
   Future<AuthSession> verifyLogin(String email, String otp);
+
+  /// Completes "Continue with FPL": exchanges the OIDC refresh token
+  /// extracted from the FPL login WebView for a platform session. The
+  /// backend finds-or-creates the account by the manager's FPL entry id.
+  Future<AuthSession> continueWithFpl({
+    required String refreshToken,
+    int? entryId,
+  });
   Future<VerificationChallenge> requestRegistration({
     required String fullName,
     required String email,
@@ -34,6 +43,8 @@ abstract interface class AppGateway {
   Future<Pool> createPool(CreatePoolCommand command);
   Future<Pool> joinPool(String id);
   Future<Pool> leavePool(String id);
+  Future<List<AppNotification>> notifications();
+  Future<void> markNotificationRead(String id);
   Future<List<Challenge>> challenges();
   Future<Challenge> createChallenge({required int opponentTeamId, required int gameweek, required int stakeCents});
   Future<WalletSummary> wallet();

@@ -7,6 +7,7 @@ import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/admin/presentation/admin_providers.dart';
 import 'package:fpl_wager/features/admin/presentation/admin_resources.dart';
+import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:go_router/go_router.dart';
 
 class AdminResourceScreen extends ConsumerWidget {
@@ -167,6 +168,8 @@ Future<void> _createWager(BuildContext context, WidgetRef ref) async {
   final name = TextEditingController();
   final gameweek = TextEditingController();
   final stake = TextEditingController(text: '100000');
+  final rules = TextEditingController();
+  final drawMethod = ValueNotifier<PoolDrawMethod>(PoolDrawMethod.split);
   final accepted = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
     title: const Text('Create wager'),
     content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, children: [
@@ -175,6 +178,22 @@ Future<void> _createWager(BuildContext context, WidgetRef ref) async {
       TextField(controller: gameweek, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Gameweek')),
       const SizedBox(height: 12),
       TextField(controller: stake, keyboardType: TextInputType.number, decoration: const InputDecoration(labelText: 'Stake (integer cents)')),
+      const SizedBox(height: 12),
+      TextField(controller: rules, minLines: 3, maxLines: 6, decoration: const InputDecoration(labelText: 'Rules')),
+      const SizedBox(height: 12),
+      ValueListenableBuilder<PoolDrawMethod>(
+        valueListenable: drawMethod,
+        builder: (context, value, _) => DropdownButtonFormField<PoolDrawMethod>(
+          initialValue: value,
+          decoration: const InputDecoration(labelText: 'Draw settlement'),
+          items: PoolDrawMethod.values
+              .map((method) => DropdownMenuItem(value: method, child: Text(method.label)))
+              .toList(),
+          onChanged: (next) {
+            if (next != null) drawMethod.value = next;
+          },
+        ),
+      ),
     ])),
     actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Create'))],
   ));
@@ -185,9 +204,11 @@ Future<void> _createWager(BuildContext context, WidgetRef ref) async {
       'stake_cents': int.tryParse(stake.text),
       'visibility': 'public',
       'approval_required': false,
+      'rules': rules.text.trim(),
+      'draw_method': drawMethod.value.wireValue,
     });
   }
-  name.dispose(); gameweek.dispose(); stake.dispose();
+  name.dispose(); gameweek.dispose(); stake.dispose(); rules.dispose(); drawMethod.dispose();
 }
 
 Future<void> _updateWager(BuildContext context, WidgetRef ref, Map<String, Object?> record) async {
@@ -196,12 +217,25 @@ Future<void> _updateWager(BuildContext context, WidgetRef ref, Map<String, Objec
   final status = ValueNotifier<String>(record['status']?.toString() ?? 'draft');
   final accepted = await showDialog<bool>(context: context, builder: (context) => AlertDialog(
     title: Text(_first(record, const ['name', 'id'])),
-    content: ValueListenableBuilder<String>(valueListenable: status, builder: (context, value, _) => DropdownButtonFormField<String>(
-      initialValue: value,
-      decoration: const InputDecoration(labelText: 'Wager status'),
-      items: const ['draft', 'open', 'locked', 'scoring', 'settled', 'cancelled'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
-      onChanged: (next) { if (next != null) status.value = next; },
-    )),
+    content: SingleChildScrollView(child: Column(mainAxisSize: MainAxisSize.min, crossAxisAlignment: CrossAxisAlignment.start, children: [
+      if ((record['rules']?.toString() ?? '').isNotEmpty) ...[
+        Text('Submitted rules', style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 6),
+        Text(record['rules']!.toString()),
+        const SizedBox(height: 16),
+      ],
+      Text(
+        'Draw settlement: ${PoolDrawMethod.fromWireValue(record['draw_method']?.toString() ?? 'split').label}',
+        style: Theme.of(context).textTheme.titleSmall,
+      ),
+      const SizedBox(height: 16),
+      ValueListenableBuilder<String>(valueListenable: status, builder: (context, value, _) => DropdownButtonFormField<String>(
+        initialValue: value,
+        decoration: const InputDecoration(labelText: 'Wager status'),
+        items: const ['draft', 'open', 'locked', 'scoring', 'settled', 'cancelled'].map((item) => DropdownMenuItem(value: item, child: Text(item))).toList(),
+        onChanged: (next) { if (next != null) status.value = next; },
+      )),
+    ])),
     actions: [TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')), FilledButton(onPressed: () => Navigator.pop(context, true), child: const Text('Update'))],
   ));
   if (accepted == true) await ref.read(adminResourceActionProvider.notifier).updateWagerStatus(id, status.value);

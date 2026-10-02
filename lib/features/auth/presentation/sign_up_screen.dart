@@ -17,6 +17,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
   final _email = TextEditingController();
   final _phone = TextEditingController();
   final _password = TextEditingController();
+  final _passwordVisible = ValueNotifier<bool>(false);
 
   @override
   void dispose() {
@@ -24,6 +25,7 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
     _email.dispose();
     _phone.dispose();
     _password.dispose();
+    _passwordVisible.dispose();
     super.dispose();
   }
 
@@ -62,12 +64,24 @@ class _SignUpScreenState extends ConsumerState<SignUpScreen> {
               decoration: const InputDecoration(labelText: 'Phone number (optional)', hintText: '+234…', prefixIcon: Icon(Icons.phone_outlined)),
             ),
             const SizedBox(height: 14),
-            TextFormField(
-              controller: _password,
-              obscureText: true,
-              autofillHints: const [AutofillHints.newPassword],
-              decoration: const InputDecoration(labelText: 'Password', helperText: 'Use at least 10 characters', prefixIcon: Icon(Icons.lock_outline_rounded)),
-              validator: (value) => (value?.length ?? 0) < 10 ? 'Use at least 10 characters' : null,
+            ValueListenableBuilder<bool>(
+              valueListenable: _passwordVisible,
+              builder: (context, visible, _) => TextFormField(
+                controller: _password,
+                obscureText: !visible,
+                autofillHints: const [AutofillHints.newPassword],
+                decoration: InputDecoration(
+                  labelText: 'Password',
+                  helperText: 'Use at least 10 characters',
+                  prefixIcon: const Icon(Icons.lock_outline_rounded),
+                  suffixIcon: IconButton(
+                    tooltip: visible ? 'Hide password' : 'Show password',
+                    onPressed: () => _passwordVisible.value = !visible,
+                    icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined),
+                  ),
+                ),
+                validator: (value) => (value?.length ?? 0) < 10 ? 'Use at least 10 characters' : null,
+              ),
             ),
             const SizedBox(height: 20),
             if (flow.error != null) ...[
