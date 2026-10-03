@@ -72,12 +72,7 @@ class WelcomeScreen extends StatelessWidget {
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
                         ),
                   ),
-                  const SizedBox(height: 4),
-                  TextButton(
-                    onPressed: () => context.go('/sign-in'),
-                    child: const Text('Admin sign in'),
-                  ),
-                  const SizedBox(height: 4),
+                  const SizedBox(height: 12),
                   Text(
                     '18+ · Play responsibly',
                     textAlign: TextAlign.center,

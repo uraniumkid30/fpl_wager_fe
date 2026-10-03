@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
+import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fpl_wager/features/settings/domain/app_settings.dart';
 import 'package:fpl_wager/features/settings/presentation/settings_controller.dart';
 import 'package:go_router/go_router.dart';
@@ -13,7 +14,8 @@ class SettingsScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final async = ref.watch(settingsControllerProvider);
-    final profile = ref.watch(authControllerProvider).value?.user;
+    final profile = ref.watch(dashboardProvider).value?.user ??
+        ref.watch(authControllerProvider).value?.user;
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
       body: AsyncContent(
@@ -33,28 +35,13 @@ class SettingsScreen extends ConsumerWidget {
                   const SizedBox(width: 14),
                   Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
                     Text(profile.fullName, style: Theme.of(context).textTheme.titleMedium),
-                    Text(profile.email, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    if (profile.displayEmail.isNotEmpty)
+                      Text(profile.displayEmail, style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                     const SizedBox(height: 6),
-                    Wrap(spacing: 8, children: [StatusPill(profile.role), StatusPill(profile.status)]),
+                    StatusPill(profile.status),
                   ])),
                 ]),
               ),
-            if (profile?.isAdmin ?? false) ...[
-              const SizedBox(height: 14),
-              GradientPanel(
-                onTap: () => context.push('/admin'),
-                padding: const EdgeInsets.all(18),
-                child: Row(children: [
-                  const Icon(Icons.admin_panel_settings_rounded, color: AppColors.purple),
-                  const SizedBox(width: 14),
-                  Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-                    Text('Administration', style: Theme.of(context).textTheme.titleMedium),
-                    Text('Users, wagers, payments, wallets and settings', style: Theme.of(context).textTheme.bodySmall),
-                  ])),
-                  const Icon(Icons.chevron_right_rounded),
-                ]),
-              ),
-            ],
             const SizedBox(height: 24),
             Text('Appearance', style: Theme.of(context).textTheme.titleLarge),
             const SizedBox(height: 10),

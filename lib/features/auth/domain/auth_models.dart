@@ -6,6 +6,8 @@ class UserProfile {
     this.phone = '',
     this.status = 'active',
     this.role = 'user',
+    this.emailVerified = false,
+    this.fplEntryId,
   });
 
   factory UserProfile.fromJson(Map<String, Object?> json) => UserProfile(
@@ -15,6 +17,8 @@ class UserProfile {
         phone: json['phone'] as String? ?? '',
         status: json['status'] as String? ?? 'active',
         role: json['role'] as String? ?? 'user',
+        emailVerified: json['email_verified'] as bool? ?? false,
+        fplEntryId: (json['fpl_entry_id'] as num?)?.toInt(),
       );
 
   final String id;
@@ -23,6 +27,21 @@ class UserProfile {
   final String phone;
   final String status;
   final String role;
+
+  /// True once the address has been confirmed with a code. Accounts created
+  /// with "Continue with FPL" start unverified.
+  final bool emailVerified;
+
+  /// The FPL entry this account proved it owns by signing in with FPL.
+  final int? fplEntryId;
+
+  /// An FPL account with no address on file yet is given a stand-in one by
+  /// the server. It is not somewhere mail can be sent, so it is never shown.
+  bool get hasPlaceholderEmail =>
+      email.toLowerCase().endsWith('@fpl.fplwager.internal');
+
+  /// The address to show the user: empty while it is still the stand-in.
+  String get displayEmail => hasPlaceholderEmail ? '' : email;
 
   String get firstName {
     final value = fullName.trim();

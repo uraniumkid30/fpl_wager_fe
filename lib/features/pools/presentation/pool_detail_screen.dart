@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
+import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
@@ -18,9 +19,7 @@ class PoolDetailScreen extends ConsumerWidget {
     ref.listen(poolActionProvider, (_, next) {
       if (next.hasError) {
         if (openTopUpIfInsufficientFunds(context, next.error)) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(next.error.toString())),
-        );
+        AppNotice.error(context, next.error!);
       }
     });
     return Scaffold(
@@ -198,19 +197,27 @@ class _Body extends StatelessWidget {
           const SizedBox(height: 22),
           Text('Prize split', style: Theme.of(context).textTheme.titleLarge),
           const SizedBox(height: 10),
+          if (item.payout != null && item.payout!.entrants > 0) ...[
+            _PayoutSummary(plan: item.payout!),
+            const SizedBox(height: 12),
+          ],
           GradientPanel(
             child: item.prizeSplit.isEmpty
                 ? const Text(
-                    'Prize allocation appears when entries are confirmed.',
+                    'Prizes appear once the first manager joins. One manager '
+                    'wins for every ten who enter.',
                   )
                 : Column(
                     children: item.prizeSplit
                         .map(
                           (prize) => ListTile(
+                            dense: true,
                             contentPadding: EdgeInsets.zero,
                             leading: CircleAvatar(child: Text('${prize.place}')),
                             title: Text(_placeLabel(prize.place)),
-                            subtitle: Text('${prize.percent}% of the pool'),
+                            subtitle: Text(
+                              '${prize.percentLabel}% of the prize pool',
+                            ),
                             trailing: Text(
                               money(prize.amountCents),
                               style: Theme.of(context)
@@ -225,7 +232,8 @@ class _Body extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Platform fees are disclosed before settlement. Official FPL points determine the result.',
+            'Prizes are worked out from the entries so far and grow as more '
+            'managers join. Official FPL points decide the places.',
             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
@@ -235,14 +243,95 @@ class _Body extends StatelessWidget {
 }
 
 String _placeLabel(int place) {
-  final suffix = place == 1
-      ? 'st'
-      : place == 2
-          ? 'nd'
-          : place == 3
-              ? 'rd'
-              : 'th';
+  // 11th, 12th and 13th are the exceptions to 1st, 2nd, 3rd.
+  final lastTwo = place % 100;
+  final last = place % 10;
+  final suffix = lastTwo >= 11 && lastTwo <= 13
+      ? 'th'
+      : last == 1
+          ? 'st'
+          : last == 2
+              ? 'nd'
+              : last == 3
+                  ? 'rd'
+                  : 'th';
   return '$place$suffix place';
+}
+
+/// How the pot becomes the prize pool: total staked, the platform fee, what
+/// is left for the winners and how many of them there are.
+class _PayoutSummary extends StatelessWidget {
+  const _PayoutSummary({required this.plan});
+
+  final PayoutPlan plan;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return GradientPanel(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _PayoutRow(
+            label: '${plan.entrants} ${plan.entrants == 1 ? 'manager' : 'managers'} × ${money(plan.stakeCents)}',
+            value: money(plan.totalStakedCents),
+          ),
+          _PayoutRow(
+            label: 'Platform fee (${plan.houseCutPercentLabel}%)',
+            value: '−${money(plan.houseCutCents)}',
+          ),
+          const Divider(height: 22),
+          _PayoutRow(
+            label: 'Prize pool',
+            value: money(plan.totalWinningCents),
+            strong: true,
+          ),
+          const SizedBox(height: 12),
+          Text(
+            '${plan.winners} ${plan.winners == 1 ? 'winner' : 'winners'}. '
+            'One manager wins for every ten who enter, up to fifty. Each '
+            'place wins a little less than the place above, and the last '
+            'winner always gets at least 130% of the stake.',
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: muted,
+                  height: 1.4,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PayoutRow extends StatelessWidget {
+  const _PayoutRow({
+    required this.label,
+    required this.value,
+    this.strong = false,
+  });
+
+  final String label;
+  final String value;
+  final bool strong;
+
+  @override
+  Widget build(BuildContext context) {
+    final style = strong
+        ? Theme.of(context).textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.w900,
+            )
+        : Theme.of(context).textTheme.bodyMedium;
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 3),
+      child: Row(
+        children: [
+          Expanded(child: Text(label, style: style)),
+          const SizedBox(width: 12),
+          Text(value, style: style),
+        ],
+      ),
+    );
+  }
 }
 
 class _HeroValue extends StatelessWidget {

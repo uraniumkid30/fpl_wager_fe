@@ -10,9 +10,7 @@ class AppShell extends StatelessWidget {
   static const _destinations = [
     NavigationDestination(icon: Icon(Icons.space_dashboard_outlined), selectedIcon: Icon(Icons.space_dashboard_rounded), label: 'Dashboard'),
     NavigationDestination(icon: Icon(Icons.emoji_events_outlined), selectedIcon: Icon(Icons.emoji_events_rounded), label: 'Pools'),
-    NavigationDestination(icon: Icon(Icons.compare_arrows_rounded), selectedIcon: Icon(Icons.compare_arrows_rounded), label: 'Head to head'),
-    NavigationDestination(icon: Icon(Icons.account_balance_wallet_outlined), selectedIcon: Icon(Icons.account_balance_wallet_rounded), label: 'Wallet'),
-    NavigationDestination(icon: Icon(Icons.history_rounded), selectedIcon: Icon(Icons.history_toggle_off_rounded), label: 'History'),
+    NavigationDestination(icon: Icon(Icons.person_outline_rounded), selectedIcon: Icon(Icons.person_rounded), label: 'Profile'),
   ];
 
   void _go(int index) => navigationShell.goBranch(index, initialLocation: index == navigationShell.currentIndex);

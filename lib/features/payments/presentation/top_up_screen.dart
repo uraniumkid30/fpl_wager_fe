@@ -162,7 +162,7 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen>
           context,
           '${money(payment.amountCents)} was added to your wallet.',
         );
-        context.go('/wallet');
+        context.go('/profile/wallet');
       } else {
         AppNotice.info(
           context,

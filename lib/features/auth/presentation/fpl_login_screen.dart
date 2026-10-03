@@ -16,9 +16,12 @@ import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
 /// FPL email and password directly into fantasy.premierleague.com's own
 /// page — this app's Dart code never sees or handles that password. Once
 /// login completes, this widget reads the OIDC refresh token FPL's web app
-/// leaves in the WebView's localStorage and sends ONLY that token to our
+/// leaves in the WebView's localStorage and sends that token to our
 /// backend, which exchanges it, resolves the manager's identity, and
-/// returns a normal platform session.
+/// returns a normal platform session. Alongside it goes the non-secret part
+/// of the same stored login (profile claims, scope, expiry) so the server
+/// can record what FPL exposes; the access and id tokens never leave the
+/// WebView.
 ///
 /// Trust note: because this renders inside an in-app WebView rather than
 /// the device's external browser, this app's process technically has the
@@ -52,6 +55,22 @@ class _FplLoginScreenState extends ConsumerState<FplLoginScreen> {
       .filter(k => k.startsWith('oidc.user:'))
       .forEach(k => localStorage.removeItem(k));
   ''';
+
+  /// Keys of FPL's stored login that are credentials. They are stripped
+  /// before the rest is printed or sent anywhere; only the refresh token is
+  /// ever sent, on its own, to complete the sign-in.
+  static const _tokenKeys = {
+    'access_token',
+    'refresh_token',
+    'id_token',
+    'session_state',
+    'code_verifier',
+  };
+
+  static Map<String, Object?> _withoutTokens(Map<String, Object?> source) => {
+        for (final entry in source.entries)
+          if (!_tokenKeys.contains(entry.key)) entry.key: entry.value,
+      };
 
   late final WebViewController _controller;
   bool _completing = false;
@@ -113,9 +132,11 @@ class _FplLoginScreenState extends ConsumerState<FplLoginScreen> {
     if (decoded == null) return false; // not logged in yet
 
     final String? refreshToken;
+    final Map<String, Object?> session;
     try {
       final oidcUser = jsonDecode(decoded) as Map<String, Object?>;
       refreshToken = oidcUser['refresh_token'] as String?;
+      session = _withoutTokens(oidcUser);
     } catch (_) {
       return false;
     }
@@ -131,12 +152,26 @@ class _FplLoginScreenState extends ConsumerState<FplLoginScreen> {
         _error = null;
       });
     }
+    // Everything FPL's page stored for this login except the tokens: the
+    // profile claims, the scope and the expiry. Printed here so it shows in
+    // the debug console, and sent along so the server records it next to
+    // what FPL's own APIs return (see "FPL sign-ins" in the admin app).
+    debugPrint(
+      'FPL login data from the page (tokens removed):\n'
+      '${const JsonEncoder.withIndent('  ').convert(session)}',
+    );
     try {
-      final session = await ref
+      final signedIn = await ref
           .read(appGatewayProvider)
-          .continueWithFpl(refreshToken: refreshToken);
+          .continueWithFpl(refreshToken: refreshToken, session: session);
+      debugPrint(
+        'FPL sign-in accepted: name=${signedIn.user.fullName} '
+        'email=${signedIn.user.email} '
+        'emailVerified=${signedIn.user.emailVerified} '
+        'fplEntryId=${signedIn.user.fplEntryId}',
+      );
       if (!mounted) return true;
-      ref.read(authControllerProvider.notifier).accept(session);
+      ref.read(authControllerProvider.notifier).accept(signedIn);
       context.go('/dashboard');
     } catch (error) {
       debugPrint(

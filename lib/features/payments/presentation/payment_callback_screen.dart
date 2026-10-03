@@ -35,7 +35,7 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
             context,
             '${money(payment!.amountCents)} was added to your wallet.',
           );
-          context.go('/wallet');
+          context.go('/profile/wallet');
         });
       });
     }
@@ -49,7 +49,7 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
               constraints: const BoxConstraints(maxWidth: 520),
               child: GradientPanel(
                 child: result == null
-                    ? _Result(icon: Icons.error_outline_rounded, title: 'Missing payment reference', message: 'Return to your wallet and try the top up again.', onDone: () => context.go('/wallet'))
+                    ? _Result(icon: Icons.error_outline_rounded, title: 'Missing payment reference', message: 'Return to your wallet and try the top up again.', onDone: () => context.go('/profile/wallet'))
                     : result.when(
                         loading: () => const Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 20), Text('Verifying payment…')]),
                         error: (error, _) => _Result(icon: Icons.sync_problem_rounded, title: 'Verification needs attention', message: error.toString(), onDone: () => ref.invalidate(paymentVerificationProvider(reference)), action: 'Try again'),
@@ -57,7 +57,7 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
                           icon: payment.isSuccessful ? Icons.check_circle_rounded : Icons.schedule_rounded,
                           title: payment.isSuccessful ? 'Wallet funded' : 'Payment ${payment.status}',
                           message: payment.isSuccessful ? '${money(payment.amountCents)} has been added to your wallet.' : 'We have not received a successful payment confirmation yet.',
-                          onDone: () => context.go('/wallet'),
+                          onDone: () => context.go('/profile/wallet'),
                         ),
                       ),
               ),

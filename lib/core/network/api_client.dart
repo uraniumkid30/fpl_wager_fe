@@ -114,11 +114,10 @@ class ApiClient {
       final response = await execute();
       final responseData = response.data;
 
-      if (responseData == null) return const {};
+      // A 204 (or any reply that is not a JSON object) has nothing to parse.
+      if (responseData is! Map<Object?, Object?>) return const {};
 
-      return Map<String, Object?>.from(
-        responseData as Map<Object?, Object?>,
-      );
+      return Map<String, Object?>.from(responseData);
     } on DioException catch (error) {
       if (error.response?.statusCode == 401 &&
           allowRefresh &&

@@ -11,34 +11,25 @@ import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
 abstract interface class AppGateway {
   Future<AuthSession?> restoreSession();
 
-  /// Administrator sign-in, step one: email + password. Only admin accounts
-  /// are accepted; everyone else signs in with [continueWithFpl].
-  Future<VerificationChallenge> requestLogin(String email, String password);
-
-  /// Administrator sign-in, step two: the emailed code.
-  Future<AuthSession> verifyLogin(String email, String otp);
-
   /// Completes "Continue with FPL": exchanges the OIDC refresh token
   /// extracted from the FPL login WebView for a platform session. The
   /// backend finds-or-creates the account by the manager's FPL entry id.
+  ///
+  /// [session] is the rest of what FPL's web app stored for the login
+  /// (profile claims, scope, expiry) with every token removed. The server
+  /// only records it, so an operator can see what FPL exposes at sign-in.
   Future<AuthSession> continueWithFpl({
     required String refreshToken,
-    int? entryId,
+    Map<String, Object?>? session,
   });
-  Future<VerificationChallenge> requestRegistration({
-    required String fullName,
-    required String email,
-    required String phone,
-    required String password,
-  });
-  Future<AuthSession> verifyRegistration(String email, String otp);
-  Future<void> requestPasswordReset(String email);
-  Future<String> verifyPasswordOtp(String email, String otp);
-  Future<void> resetPassword({
-    required String email,
-    required String token,
-    required String newPassword,
-  });
+
+  /// "Verify email", step one: sends a six-digit code to [email].
+  Future<VerificationChallenge> requestEmailVerification(String email);
+
+  /// "Verify email", step two: confirms the code. On success [email] becomes
+  /// the account's verified address and the updated profile is returned.
+  Future<UserProfile> verifyEmail(String email, String otp);
+
   Future<void> logout();
   Future<Dashboard> dashboard();
   Future<FplTeam> linkTeam(int entryId);

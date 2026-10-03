@@ -40,105 +40,33 @@ class RemoteGateway implements AppGateway {
   }
 
   @override
-  Future<VerificationChallenge> requestLogin(
-    String email,
-    String password,
-  ) async => VerificationChallenge.fromJson(
-        await _client.post(
-          '/auth/admin/login',
-          allowRefresh: false,
-          data: {'email': email, 'password': password},
-        ),
-      );
-
-  @override
-  Future<AuthSession> verifyLogin(String email, String otp) async =>
-      _saveTokenResponse(
-        await _client.post(
-          '/auth/admin/login/verify',
-          allowRefresh: false,
-          data: {'email': email, 'otp': otp},
-        ),
-      );
-
-  @override
   Future<AuthSession> continueWithFpl({
     required String refreshToken,
-    int? entryId,
+    Map<String, Object?>? session,
   }) async => _saveTokenResponse(
         await _client.post(
           '/auth/fpl',
           allowRefresh: false,
           data: {
             'refresh_token': refreshToken,
-            if (entryId != null) 'entry_id': entryId,
+            if (session != null) 'session': session,
           },
         ),
       );
 
   @override
-  Future<VerificationChallenge> requestRegistration({
-    required String fullName,
-    required String email,
-    required String phone,
-    required String password,
-  }) async => VerificationChallenge.fromJson(
-        await _client.post(
-          '/auth/register',
-          allowRefresh: false,
-          data: {
-            'full_name': fullName,
-            'email': email,
-            'phone': phone,
-            'password': password,
-          },
-        ),
+  Future<VerificationChallenge> requestEmailVerification(String email) async =>
+      VerificationChallenge.fromJson(
+        await _client.post('/me/email/verification', data: {'email': email}),
       );
 
   @override
-  Future<AuthSession> verifyRegistration(String email, String otp) async =>
-      _saveTokenResponse(
-        await _client.post(
-          '/auth/register/verify',
-          allowRefresh: false,
-          data: {'email': email, 'otp': otp},
-        ),
-      );
-
-  @override
-  Future<void> requestPasswordReset(String email) async {
-    await _client.post(
-      '/auth/password/forgot',
-      allowRefresh: false,
-      data: {'email': email},
-    );
-  }
-
-  @override
-  Future<String> verifyPasswordOtp(String email, String otp) async {
+  Future<UserProfile> verifyEmail(String email, String otp) async {
     final body = await _client.post(
-      '/auth/password/otp/verify',
-      allowRefresh: false,
+      '/me/email/verify',
       data: {'email': email, 'otp': otp},
     );
-    return body['verification_token']! as String;
-  }
-
-  @override
-  Future<void> resetPassword({
-    required String email,
-    required String token,
-    required String newPassword,
-  }) async {
-    await _client.post(
-      '/auth/password/reset',
-      allowRefresh: false,
-      data: {
-        'email': email,
-        'token': token,
-        'new_password': newPassword,
-      },
-    );
+    return UserProfile.fromJson(_json(body, 'user'));
   }
 
   Future<AuthSession> _saveTokenResponse(Map<String, Object?> body) async {

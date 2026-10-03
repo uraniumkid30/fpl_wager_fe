@@ -31,27 +31,17 @@ class DemoGateway implements AppGateway {
   final List<AppNotification> _notifications = [];
 
   Future<void> _wait() => Future<void>.delayed(const Duration(milliseconds: 350));
-  UserProfile _user(String email, [String name = 'Dean Miles']) => UserProfile(id: 'demo-user', fullName: name, email: email);
+  UserProfile _user(String email, [String name = 'Dean Miles']) => UserProfile(id: 'demo-user', fullName: name, email: email, fplEntryId: 1234567);
   AuthSession _newSession(UserProfile user) => AuthSession(user: user, accessToken: 'demo-access', refreshToken: 'demo-refresh');
 
   @override
   Future<AuthSession?> restoreSession() async { await _wait(); return _session; }
   @override
-  Future<VerificationChallenge> requestLogin(String email, String password) async { await _wait(); return const VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/auth/login/verify', expiresInSeconds: 600); }
+  Future<AuthSession> continueWithFpl({required String refreshToken, Map<String, Object?>? session}) async { await _wait(); return _session = _newSession(_user('demo-manager@fplwager.local', 'Demo Manager')); }
   @override
-  Future<AuthSession> verifyLogin(String email, String otp) async { await _wait(); return _session = _newSession(_user(email)); }
+  Future<VerificationChallenge> requestEmailVerification(String email) async { await _wait(); return VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/me/email/verify', expiresInSeconds: 600); }
   @override
-  Future<VerificationChallenge> requestRegistration({required String fullName, required String email, required String phone, required String password}) async { await _wait(); return const VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/auth/register/verify', expiresInSeconds: 600); }
-  @override
-  Future<AuthSession> verifyRegistration(String email, String otp) async { await _wait(); return _session = _newSession(_user(email)); }
-  @override
-  Future<AuthSession> continueWithFpl({required String refreshToken, int? entryId}) async { await _wait(); return _session = _newSession(_user('demo-manager@fplwager.local', 'Demo Manager')); }
-  @override
-  Future<void> requestPasswordReset(String email) async { await _wait(); }
-  @override
-  Future<String> verifyPasswordOtp(String email, String otp) async { await _wait(); return 'demo-reset-token'; }
-  @override
-  Future<void> resetPassword({required String email, required String token, required String newPassword}) async { await _wait(); }
+  Future<UserProfile> verifyEmail(String email, String otp) async { await _wait(); final current = _session?.user ?? _user(email); final updated = UserProfile(id: current.id, fullName: current.fullName, email: email, emailVerified: true, fplEntryId: current.fplEntryId); _session = _newSession(updated); return updated; }
   @override
   Future<void> logout() async { await _wait(); _session = null; }
 

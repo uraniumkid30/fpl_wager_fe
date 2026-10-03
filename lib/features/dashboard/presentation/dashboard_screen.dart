@@ -65,6 +65,10 @@ class _DashboardBody extends ConsumerWidget {
           ),
           const SizedBox(height: 14),
         ],
+        if (!value.user.emailVerified) ...[
+          _VerifyEmailLink(email: value.user.displayEmail),
+          const SizedBox(height: 14),
+        ],
         _Metrics(value: value),
         const SizedBox(height: 28),
         Row(
@@ -82,11 +86,65 @@ class _DashboardBody extends ConsumerWidget {
         Text('Built for a fair gameweek', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 12),
         const _Principle(icon: Icons.emoji_events_outlined, title: 'Gameweek pools', body: 'Fixed stakes and visible prize splits.'),
-        const _Principle(icon: Icons.compare_arrows_rounded, title: 'Head to head', body: 'Challenge any verified FPL manager.'),
+        const _Principle(icon: Icons.compare_arrows_rounded, title: 'Head to head', body: 'Challenge any verified FPL manager from the Pools tab.'),
         const _Principle(icon: Icons.receipt_long_outlined, title: 'Transparent wallet', body: 'Every movement has a ledger entry.'),
       ],
     );
   }
+}
+
+/// Shown until the account's email address has been confirmed with a code.
+class _VerifyEmailLink extends StatelessWidget {
+  const _VerifyEmailLink({required this.email});
+
+  /// The address on the account, or empty if there isn't a real one yet.
+  final String email;
+
+  @override
+  Widget build(BuildContext context) => GradientPanel(
+        onTap: () => context.push('/verify-email'),
+        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+        child: Row(
+          children: [
+            Icon(
+              Icons.mark_email_unread_outlined,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Your email is not verified',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 2),
+                  Text(
+                    email.isEmpty
+                        ? 'Add one for receipts and important updates.'
+                        : email,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 8),
+            Text(
+              'Verify email',
+              style: Theme.of(context).textTheme.labelLarge?.copyWith(
+                    color: Theme.of(context).colorScheme.primary,
+                    fontWeight: FontWeight.w800,
+                    decoration: TextDecoration.underline,
+                  ),
+            ),
+          ],
+        ),
+      );
 }
 
 class _Metrics extends StatelessWidget {

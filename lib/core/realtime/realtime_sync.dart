@@ -7,7 +7,6 @@ import 'package:fpl_wager/core/config/app_config.dart';
 import 'package:fpl_wager/core/network/api_client.dart';
 import 'package:fpl_wager/core/network/providers.dart';
 import 'package:fpl_wager/core/realtime/realtime_socket.dart';
-import 'package:fpl_wager/features/admin/presentation/admin_providers.dart';
 import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
 import 'package:fpl_wager/features/challenges/presentation/challenges_controller.dart';
 import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
@@ -40,26 +39,10 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
     if (resourceId != null && resourceId.isNotEmpty) {
       ref.invalidate(poolProvider(resourceId));
     }
-    ref.invalidate(adminCollectionProvider('wagers'));
   }
   if (resources.contains('challenges')) ref.invalidate(challengesProvider);
   if (resources.contains('account')) {
     ref.invalidate(authControllerProvider);
-  }
-  if (resources.contains('payments') || resources.contains('account')) {
-    ref.invalidate(adminDashboardProvider);
-  }
-  if (resources.contains('payments')) {
-    ref.invalidate(adminCollectionProvider('payments'));
-  }
-  if (resources.contains('wallet')) {
-    ref.invalidate(adminCollectionProvider('wallets'));
-  }
-  if (resources.contains('history')) {
-    ref.invalidate(adminCollectionProvider('transactions'));
-  }
-  if (resources.contains('account')) {
-    ref.invalidate(adminCollectionProvider('users'));
   }
   if (resources.contains('notifications')) {
     ref.invalidate(notificationsProvider);

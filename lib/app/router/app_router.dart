@@ -5,33 +5,23 @@ import 'package:go_router/go_router.dart';
 
 import 'package:fpl_wager/app/router/app_shell.dart';
 import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
-import 'package:fpl_wager/features/auth/presentation/sign_in_screen.dart';
-import 'package:fpl_wager/features/auth/presentation/sign_up_screen.dart';
-import 'package:fpl_wager/features/auth/presentation/splash_screen.dart';
-import 'package:fpl_wager/features/auth/presentation/welcome_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/fpl_login_screen.dart';
-import 'package:fpl_wager/features/auth/presentation/forgot_password_screen.dart';
-import 'package:fpl_wager/features/auth/presentation/otp_screen.dart';
-import 'package:fpl_wager/features/auth/presentation/reset_password_screen.dart';
+import 'package:fpl_wager/features/auth/presentation/splash_screen.dart';
+import 'package:fpl_wager/features/auth/presentation/verify_email_screen.dart';
+import 'package:fpl_wager/features/auth/presentation/welcome_screen.dart';
 import 'package:fpl_wager/features/challenges/presentation/challenges_screen.dart';
 import 'package:fpl_wager/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:fpl_wager/features/fpl_team/presentation/link_team_screen.dart';
 import 'package:fpl_wager/features/history/presentation/history_screen.dart';
+import 'package:fpl_wager/features/notifications/presentation/notifications_screen.dart';
+import 'package:fpl_wager/features/payments/presentation/payment_callback_screen.dart';
+import 'package:fpl_wager/features/payments/presentation/top_up_screen.dart';
 import 'package:fpl_wager/features/pools/presentation/create_pool_screen.dart';
 import 'package:fpl_wager/features/pools/presentation/pool_detail_screen.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_screen.dart';
+import 'package:fpl_wager/features/profile/presentation/profile_screen.dart';
 import 'package:fpl_wager/features/settings/presentation/settings_screen.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_screen.dart';
-import 'package:fpl_wager/features/admin/presentation/admin_screen.dart'
-    as admin_dashboard;
-import 'package:fpl_wager/features/admin/presentation/admin_resource_screen.dart'
-    as admin_resource;
-import 'package:fpl_wager/features/admin/presentation/admin_user_screen.dart'
-    as admin_user;
-import 'package:fpl_wager/features/payments/presentation/payment_callback_screen.dart';
-import 'package:fpl_wager/features/payments/presentation/top_up_screen.dart';
-import 'package:fpl_wager/features/notifications/presentation/notifications_screen.dart';
-
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -43,44 +33,19 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/dashboard',
     redirect: (context, state) {
       final location = state.matchedLocation;
-      final public =
-          location == '/welcome' ||
-          location == '/fpl-login' ||
-          location == '/sign-in' ||
-          location == '/sign-up' ||
-          location == '/auth/verify' ||
-          location == '/forgot-password' ||
-          location == '/reset-password';
+      final public = location == '/welcome' || location == '/fpl-login';
       if (auth.isLoading) return location == '/splash' ? null : '/splash';
       // Anyone who is not signed in — first launch, or just signed out —
       // lands on the app's own welcome page. FPL's login only opens when
-      // they tap "Continue with FPL" there. '/sign-in' is the administrator
-      // email + password sign-in, also reached from the welcome page.
+      // they tap "Continue with FPL" there.
       if (!signedIn) return public ? null : '/welcome';
       if (public || location == '/splash') return '/dashboard';
-      if (location.startsWith('/admin') && !(auth.value?.user.isAdmin ?? false)) {
-        return '/dashboard';
-      }
       return null;
     },
     routes: [
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
       GoRoute(path: '/fpl-login', builder: (_, _) => const FplLoginScreen()),
-      GoRoute(path: '/sign-in', builder: (_, _) => const SignInScreen()),
-      GoRoute(path: '/sign-up', builder: (_, _) => const SignUpScreen()),
-      GoRoute(path: '/auth/verify', builder: (_, _) => const OtpScreen()),
-      GoRoute(
-        path: '/forgot-password',
-        builder: (_, _) => const ForgotPasswordScreen(),
-      ),
-      GoRoute(
-        path: '/reset-password',
-        builder: (_, state) => ResetPasswordScreen(
-          email: state.uri.queryParameters['email'],
-          token: state.uri.queryParameters['token'],
-        ),
-      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
@@ -105,27 +70,21 @@ final routerProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/challenges',
+                path: '/profile',
                 pageBuilder: (_, state) =>
-                    const NoTransitionPage(child: ChallengesScreen()),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/wallet',
-                pageBuilder: (_, state) =>
-                    const NoTransitionPage(child: WalletScreen()),
-              ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
-              GoRoute(
-                path: '/history',
-                pageBuilder: (_, state) =>
-                    const NoTransitionPage(child: HistoryScreen()),
+                    const NoTransitionPage(child: ProfileScreen()),
+                routes: [
+                  // Wallet and History live under Profile. Opening either
+                  // keeps Profile underneath, so Back returns to it.
+                  GoRoute(
+                    path: 'wallet',
+                    builder: (_, _) => const WalletScreen(),
+                  ),
+                  GoRoute(
+                    path: 'history',
+                    builder: (_, _) => const HistoryScreen(),
+                  ),
+                ],
               ),
             ],
           ),
@@ -179,24 +138,16 @@ final routerProvider = Provider<GoRouter>((ref) {
               '',
         ),
       ),
+      // Head to head is no longer a tab; it opens from its card on Pools.
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
-        path: '/admin',
-        builder: (_, _) => const admin_dashboard.AdminScreen(),
+        path: '/challenges',
+        builder: (_, _) => const ChallengesScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
-        path: '/admin/users/:userId',
-        builder: (_, state) => admin_user.AdminUserScreen(
-          userId: state.pathParameters['userId']!,
-        ),
-      ),
-      GoRoute(
-        parentNavigatorKey: _rootNavigatorKey,
-        path: '/admin/resources/:resource',
-        builder: (_, state) => admin_resource.AdminResourceScreen(
-          resource: state.pathParameters['resource']!,
-        ),
+        path: '/verify-email',
+        builder: (_, _) => const VerifyEmailScreen(),
       ),
     ],
   );

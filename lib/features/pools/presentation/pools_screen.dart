@@ -70,7 +70,7 @@ class PoolsScreen extends ConsumerWidget {
                     ),
                   ),
                 const SizedBox(height: 8),
-                _HeadToHeadCard(onTap: () => context.go('/challenges')),
+                _HeadToHeadCard(onTap: () => context.push('/challenges')),
                 const SizedBox(height: 28),
                 _SectionTitle(
                   title: 'Custom pools',
