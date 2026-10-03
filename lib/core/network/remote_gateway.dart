@@ -45,7 +45,7 @@ class RemoteGateway implements AppGateway {
     String password,
   ) async => VerificationChallenge.fromJson(
         await _client.post(
-          '/auth/login',
+          '/auth/admin/login',
           allowRefresh: false,
           data: {'email': email, 'password': password},
         ),
@@ -55,7 +55,7 @@ class RemoteGateway implements AppGateway {
   Future<AuthSession> verifyLogin(String email, String otp) async =>
       _saveTokenResponse(
         await _client.post(
-          '/auth/login/verify',
+          '/auth/admin/login/verify',
           allowRefresh: false,
           data: {'email': email, 'otp': otp},
         ),

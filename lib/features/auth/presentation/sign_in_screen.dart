@@ -28,8 +28,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
   Widget build(BuildContext context) {
     final flow = ref.watch(authFlowControllerProvider);
     return AuthScaffold(
-      title: 'Welcome back',
-      subtitle: 'Enter your password, then confirm the secure code we email you.',
+      title: 'Admin sign in',
+      subtitle: 'For administrators only. Enter your password, then confirm the secure code we email you.',
       onBack: () => context.go('/welcome'),
       child: Form(
         key: _formKey,
@@ -82,8 +82,8 @@ class _SignInScreenState extends ConsumerState<SignInScreen> {
             ),
             const SizedBox(height: 12),
             TextButton(
-              onPressed: flow.isLoading ? null : () => context.go('/sign-up'),
-              child: const Text('New here? Create an account'),
+              onPressed: flow.isLoading ? null : () => context.go('/welcome'),
+              child: const Text('Not an admin? Continue with FPL'),
             ),
           ],
         ),

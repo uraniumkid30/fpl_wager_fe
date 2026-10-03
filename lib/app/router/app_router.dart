@@ -52,11 +52,11 @@ final routerProvider = Provider<GoRouter>((ref) {
           location == '/forgot-password' ||
           location == '/reset-password';
       if (auth.isLoading) return location == '/splash' ? null : '/splash';
-      // '/fpl-login' is now the primary, and effectively only intended,
-      // entry point — see welcome_screen.dart. '/sign-in' and '/sign-up'
-      // stay reachable (not deleted) for now; decide whether to remove them
-      // once this path is verified end to end.
-      if (!signedIn) return public ? null : '/fpl-login';
+      // Anyone who is not signed in — first launch, or just signed out —
+      // lands on the app's own welcome page. FPL's login only opens when
+      // they tap "Continue with FPL" there. '/sign-in' is the administrator
+      // email + password sign-in, also reached from the welcome page.
+      if (!signedIn) return public ? null : '/welcome';
       if (public || location == '/splash') return '/dashboard';
       if (location.startsWith('/admin') && !(auth.value?.user.isAdmin ?? false)) {
         return '/dashboard';

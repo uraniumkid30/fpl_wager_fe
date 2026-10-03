@@ -8,6 +8,7 @@ import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
 import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/pools/presentation/pool_card.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
+import 'package:fpl_wager/features/wallet/presentation/insufficient_funds.dart';
 import 'package:go_router/go_router.dart';
 
 class PoolsScreen extends ConsumerWidget {
@@ -134,10 +135,9 @@ class PoolsScreen extends ConsumerWidget {
     final joined = await ref.read(poolActionProvider.notifier).join(pool.id);
     if (!context.mounted) return;
     if (joined == null) {
-      AppNotice.error(
-        context,
-        ref.read(poolActionProvider).error ?? 'The pool could not be joined.',
-      );
+      final error = ref.read(poolActionProvider).error;
+      if (openTopUpIfInsufficientFunds(context, error)) return;
+      AppNotice.error(context, error ?? 'The pool could not be joined.');
       return;
     }
     AppNotice.success(

@@ -10,7 +10,12 @@ import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
 
 abstract interface class AppGateway {
   Future<AuthSession?> restoreSession();
+
+  /// Administrator sign-in, step one: email + password. Only admin accounts
+  /// are accepted; everyone else signs in with [continueWithFpl].
   Future<VerificationChallenge> requestLogin(String email, String password);
+
+  /// Administrator sign-in, step two: the emailed code.
   Future<AuthSession> verifyLogin(String email, String otp);
 
   /// Completes "Continue with FPL": exchanges the OIDC refresh token

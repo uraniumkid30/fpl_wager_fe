@@ -8,6 +8,7 @@ import 'package:fpl_wager/features/challenges/domain/challenge.dart';
 import 'package:fpl_wager/features/challenges/presentation/challenges_controller.dart';
 import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
+import 'package:fpl_wager/features/wallet/presentation/insufficient_funds.dart';
 
 final challengeStakeProvider =
     NotifierProvider<ChallengeStakeController, int>(
@@ -194,11 +195,9 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen> {
       ref.read(challengeComposerProvider.notifier).close();
       AppNotice.success(context, 'Head-to-head challenge created.');
     } else if (mounted) {
-      AppNotice.error(
-        context,
-        ref.read(challengeActionProvider).error ??
-            'The challenge could not be created.',
-      );
+      final error = ref.read(challengeActionProvider).error;
+      if (openTopUpIfInsufficientFunds(context, error)) return;
+      AppNotice.error(context, error ?? 'The challenge could not be created.');
     }
   }
 }

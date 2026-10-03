@@ -4,6 +4,7 @@ import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
+import 'package:fpl_wager/features/wallet/presentation/insufficient_funds.dart';
 
 class PoolDetailScreen extends ConsumerWidget {
   const PoolDetailScreen({required this.poolId, super.key});
@@ -16,6 +17,7 @@ class PoolDetailScreen extends ConsumerWidget {
     final action = ref.watch(poolActionProvider);
     ref.listen(poolActionProvider, (_, next) {
       if (next.hasError) {
+        if (openTopUpIfInsufficientFunds(context, next.error)) return;
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text(next.error.toString())),
         );
