@@ -49,6 +49,7 @@ abstract interface class AppGateway {
     required int amountCents,
     required String provider,
     required String callbackUrl,
+    required String cancelUrl,
   });
   Future<Payment> verifyPayment(String reference);
   Future<AppSettings> updateSettings(AppSettings settings);

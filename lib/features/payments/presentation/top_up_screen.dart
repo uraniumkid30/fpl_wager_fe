@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -7,7 +5,11 @@ import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/config/app_config.dart';
 import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
+import 'package:fpl_wager/core/network/providers.dart';
+import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fpl_wager/features/payments/presentation/checkout_screen.dart';
 import 'package:fpl_wager/features/payments/presentation/payment_controller.dart';
+import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 
@@ -18,34 +20,18 @@ class TopUpScreen extends ConsumerStatefulWidget {
   ConsumerState<TopUpScreen> createState() => _TopUpScreenState();
 }
 
-class _TopUpScreenState extends ConsumerState<TopUpScreen>
-    with WidgetsBindingObserver {
-  String? _pendingReference;
-  bool _verifyingPendingPayment = false;
+class _TopUpScreenState extends ConsumerState<TopUpScreen> {
+  static const _providerLabels = {'paystack': 'Paystack', 'korapay': 'Korapay'};
 
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addObserver(this);
-  }
-
-  @override
-  void dispose() {
-    WidgetsBinding.instance.removeObserver(this);
-    super.dispose();
-  }
-
-  @override
-  void didChangeAppLifecycleState(AppLifecycleState state) {
-    if (state == AppLifecycleState.resumed) {
-      unawaited(_verifyPendingPayment());
-    }
-  }
+  /// True from the moment the checkout opens until its result is known, so
+  /// the pay button cannot start a second payment in the meantime.
+  bool _checkingOut = false;
 
   @override
   Widget build(BuildContext context) {
     final draft = ref.watch(topUpDraftProvider);
     final action = ref.watch(paymentActionProvider);
+    final busy = action.isLoading || _checkingOut;
     return Scaffold(
       appBar: AppBar(title: const Text('Top up wallet')),
       body: SafeArea(
@@ -101,14 +87,14 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen>
                       const SizedBox(height: 12),
                     ],
                     FilledButton.icon(
-                      onPressed: action.isLoading ? null : () => _startCheckout(draft),
-                      icon: action.isLoading
+                      onPressed: busy ? null : () => _startCheckout(draft),
+                      icon: busy
                           ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
-                          : const Icon(Icons.open_in_new_rounded),
+                          : const Icon(Icons.lock_rounded),
                       label: Text('Continue to pay ${money(draft.amountCents)}'),
                     ),
                     const SizedBox(height: 10),
-                    Text('You will return here after checkout so the server can verify and settle the payment.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
+                    Text('Checkout opens securely inside the app. Your wallet is credited as soon as the payment is confirmed.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),
                   ],
                 ),
               ),
@@ -120,6 +106,26 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen>
   }
 
   Future<void> _startCheckout(TopUpDraft draft) async {
+    if (_checkingOut) return;
+    setState(() => _checkingOut = true);
+    try {
+      await _checkout(draft);
+    } finally {
+      if (mounted) setState(() => _checkingOut = false);
+    }
+  }
+
+  /// The whole payment, in three steps:
+  ///
+  ///  1. the server starts the transaction with the provider and returns the
+  ///     address of the provider's checkout page,
+  ///  2. the customer pays on that page,
+  ///  3. the server confirms the payment with the provider and credits the
+  ///     wallet.
+  ///
+  /// The app only carries the customer between the steps. It never holds a
+  /// provider key and never tells the server that a payment succeeded.
+  Future<void> _checkout(TopUpDraft draft) async {
     final payment = await ref.read(paymentActionProvider.notifier).initialize(draft);
     if (!mounted) return;
     if (payment == null) {
@@ -130,49 +136,77 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen>
       );
       return;
     }
+    final confirmation =
+        '/payments/callback?reference=${Uri.encodeQueryComponent(payment.reference)}';
     if (AppConfig.useDemoData) {
-      context.go('/payments/callback?reference=${payment.reference}');
+      context.go(confirmation);
       return;
     }
-    _pendingReference = payment.reference;
+
     final checkout = Uri.tryParse(payment.checkoutUrl ?? '');
-    final opened = checkout != null &&
-        await (kIsWeb
-            ? launchUrl(checkout, webOnlyWindowName: '_self')
-            : launchUrl(checkout, mode: LaunchMode.externalApplication));
-    if (!opened && mounted) {
-      _pendingReference = null;
+    if (checkout == null || !checkout.hasScheme) {
       AppNotice.error(context, 'Could not open the secure checkout page.');
+      return;
     }
+
+    if (kIsWeb) {
+      // In a browser the provider takes over the tab and redirects back to
+      // the confirmation route when the customer is done.
+      final opened = await launchUrl(checkout, webOnlyWindowName: '_self');
+      if (!opened && mounted) {
+        AppNotice.error(context, 'Could not open the secure checkout page.');
+      }
+      return;
+    }
+
+    final outcome = await CheckoutScreen.open(
+      context,
+      checkoutUrl: checkout,
+      callbackUrl: AppConfig.paymentCallbackUrl,
+      providerLabel: _providerLabels[draft.provider] ?? 'Secure',
+    );
+    if (!mounted) return;
+
+    if (outcome == CheckoutOutcome.completed) {
+      // The confirmation screen asks the server to verify and settle.
+      context.go(confirmation);
+      return;
+    }
+    await _checkAfterLeaving(payment.reference, outcome);
   }
 
-  Future<void> _verifyPendingPayment() async {
-    final reference = _pendingReference;
-    if (reference == null || _verifyingPendingPayment) return;
-    _verifyingPendingPayment = true;
+  /// The customer cancelled or closed the checkout. They may still have paid
+  /// (closing the page a moment after the bank approved, for instance), so
+  /// the server is asked once before saying anything.
+  Future<void> _checkAfterLeaving(
+    String reference,
+    CheckoutOutcome outcome,
+  ) async {
     try {
-      await Future<void>.delayed(const Duration(milliseconds: 700));
-      final payment = await ref.read(
-        paymentVerificationProvider(reference).future,
-      );
+      final payment = await ref.read(appGatewayProvider).verifyPayment(reference);
       if (!mounted) return;
       if (payment.isSuccessful) {
-        _pendingReference = null;
+        ref.invalidate(walletProvider);
+        ref.invalidate(dashboardProvider);
         AppNotice.success(
           context,
           '${money(payment.amountCents)} was added to your wallet.',
         );
         context.go('/profile/wallet');
-      } else {
-        AppNotice.info(
-          context,
-          'Payment is still being confirmed. Return here to check again.',
-        );
+        return;
       }
-    } on Object catch (error) {
-      if (mounted) AppNotice.error(context, error);
-    } finally {
-      _verifyingPendingPayment = false;
+    } on Object {
+      // This check is only a courtesy. If it cannot be made, the message
+      // below still holds: a completed payment is credited by the provider's
+      // webhook without the app's help.
+      if (!mounted) return;
     }
+    AppNotice.info(
+      context,
+      outcome == CheckoutOutcome.cancelled
+          ? 'Payment cancelled. Nothing was added to your wallet.'
+          : 'Checkout closed. If you completed the payment, your wallet '
+              'updates as soon as it is confirmed.',
+    );
   }
 }

@@ -51,14 +51,45 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
                 child: result == null
                     ? _Result(icon: Icons.error_outline_rounded, title: 'Missing payment reference', message: 'Return to your wallet and try the top up again.', onDone: () => context.go('/profile/wallet'))
                     : result.when(
-                        loading: () => const Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 20), Text('Verifying payment…')]),
+                        // Show the spinner again while "Check again" runs,
+                        // instead of leaving the old answer on screen.
+                        skipLoadingOnRefresh: false,
+                        loading: () => const Column(mainAxisSize: MainAxisSize.min, children: [CircularProgressIndicator(), SizedBox(height: 20), Text('Confirming your payment…', textAlign: TextAlign.center)]),
                         error: (error, _) => _Result(icon: Icons.sync_problem_rounded, title: 'Verification needs attention', message: error.toString(), onDone: () => ref.invalidate(paymentVerificationProvider(reference)), action: 'Try again'),
-                        data: (payment) => _Result(
-                          icon: payment.isSuccessful ? Icons.check_circle_rounded : Icons.schedule_rounded,
-                          title: payment.isSuccessful ? 'Wallet funded' : 'Payment ${payment.status}',
-                          message: payment.isSuccessful ? '${money(payment.amountCents)} has been added to your wallet.' : 'We have not received a successful payment confirmation yet.',
-                          onDone: () => context.go('/profile/wallet'),
-                        ),
+                        data: (payment) => switch (payment.status) {
+                          'succeeded' => _Result(
+                              icon: Icons.check_circle_rounded,
+                              title: 'Wallet funded',
+                              message: '${money(payment.amountCents)} has been added to your wallet.',
+                              onDone: () => context.go('/profile/wallet'),
+                            ),
+                          'failed' => _Result(
+                              icon: Icons.error_outline_rounded,
+                              title: 'Payment failed',
+                              message: 'The payment did not go through and nothing was added to your wallet. You can try again.',
+                              onDone: () => context.go('/wallet/top-up'),
+                              action: 'Try again',
+                              onSecondary: () => context.go('/profile/wallet'),
+                              secondaryAction: 'Back to wallet',
+                            ),
+                          'cancelled' => _Result(
+                              icon: Icons.cancel_outlined,
+                              title: 'Payment cancelled',
+                              message: 'Nothing was added to your wallet.',
+                              onDone: () => context.go('/profile/wallet'),
+                            ),
+                          // Still pending after waiting: a bank transfer that
+                          // has not landed yet, or a payment never finished.
+                          _ => _Result(
+                              icon: Icons.schedule_rounded,
+                              title: 'Waiting for confirmation',
+                              message: 'Your payment has not been confirmed yet. If you paid, your wallet updates automatically as soon as it is — you do not need to stay on this screen.',
+                              onDone: () => ref.invalidate(paymentVerificationProvider(reference)),
+                              action: 'Check again',
+                              onSecondary: () => context.go('/profile/wallet'),
+                              secondaryAction: 'Back to wallet',
+                            ),
+                        },
                       ),
               ),
             ),
@@ -70,12 +101,22 @@ class _PaymentCallbackScreenState extends ConsumerState<PaymentCallbackScreen> {
 }
 
 class _Result extends StatelessWidget {
-  const _Result({required this.icon, required this.title, required this.message, required this.onDone, this.action = 'Back to wallet'});
+  const _Result({
+    required this.icon,
+    required this.title,
+    required this.message,
+    required this.onDone,
+    this.action = 'Back to wallet',
+    this.onSecondary,
+    this.secondaryAction,
+  });
   final IconData icon;
   final String title;
   final String message;
   final VoidCallback onDone;
   final String action;
+  final VoidCallback? onSecondary;
+  final String? secondaryAction;
 
   @override
   Widget build(BuildContext context) => Column(
@@ -88,6 +129,10 @@ class _Result extends StatelessWidget {
           Text(message, textAlign: TextAlign.center),
           const SizedBox(height: 24),
           FilledButton(onPressed: onDone, child: Text(action)),
+          if (onSecondary != null && secondaryAction != null) ...[
+            const SizedBox(height: 8),
+            TextButton(onPressed: onSecondary, child: Text(secondaryAction!)),
+          ],
         ],
       );
 }

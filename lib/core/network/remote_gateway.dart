@@ -228,6 +228,7 @@ class RemoteGateway implements AppGateway {
     required int amountCents,
     required String provider,
     required String callbackUrl,
+    required String cancelUrl,
   }) async => Payment.fromJson(
         await _client.post(
           '/payments',
@@ -237,6 +238,7 @@ class RemoteGateway implements AppGateway {
             'amount_cents': amountCents,
             'currency': 'NGN',
             'callback_url': callbackUrl,
+            'cancel_url': cancelUrl,
           },
         ),
       );

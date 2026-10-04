@@ -74,7 +74,7 @@ class DemoGateway implements AppGateway {
   @override
   Future<WalletSummary> creditWallet(int amountCents) async { await _wait(); _balance += amountCents; _ledger.insert(0, LedgerEntry(id: _uuid.v4(), kind: 'top_up', description: 'Top up', amountCents: amountCents, createdAt: DateTime.now())); return wallet(); }
   @override
-  Future<Payment> initializePayment({required int amountCents, required String provider, required String callbackUrl}) async { await _wait(); return Payment(id: _uuid.v4(), userId: 'demo-user', provider: provider, credentialMode: 'test', reference: 'demo-payment', amountCents: amountCents, currency: 'NGN', status: 'pending', checkoutUrl: callbackUrl); }
+  Future<Payment> initializePayment({required int amountCents, required String provider, required String callbackUrl, required String cancelUrl}) async { await _wait(); return Payment(id: _uuid.v4(), userId: 'demo-user', provider: provider, credentialMode: 'test', reference: 'demo-payment', amountCents: amountCents, currency: 'NGN', status: 'pending', checkoutUrl: callbackUrl); }
   @override
   Future<Payment> verifyPayment(String reference) async { await _wait(); return Payment(id: 'demo-payment-id', userId: 'demo-user', provider: 'paystack', credentialMode: 'test', reference: reference, amountCents: 100000, currency: 'NGN', status: 'succeeded'); }
   @override

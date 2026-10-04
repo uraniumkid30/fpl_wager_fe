@@ -23,15 +23,32 @@ class AppConfig {
     defaultValue: '',
   );
 
-  /// Checkout return URL sent to the payment provider.
+  /// Where the payment provider sends the customer when checkout finishes.
   ///
-  /// Web defaults to the current origin and GoRouter's hash route. Production
-  /// can override this with `--dart-define=PAYMENT_CALLBACK_URL=...`.
+  /// On a phone the checkout runs in an in-app browser that watches for this
+  /// address and closes itself, so it only has to be an address we own: the
+  /// API's own return page. On the web the provider redirects the whole tab,
+  /// so it is the app's payment confirmation route.
+  ///
+  /// `--dart-define=PAYMENT_CALLBACK_URL=...` overrides it.
   static String get paymentCallbackUrl {
     if (_configuredPaymentCallbackUrl.isNotEmpty) {
       return _configuredPaymentCallbackUrl;
     }
     if (kIsWeb) return '${Uri.base.origin}/#/payments/callback';
-    return 'fplwager:///payments/callback';
+    return '${apiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1/payments/callback';
+  }
+
+  /// Where the provider sends the customer when they press cancel on the
+  /// checkout page (Paystack only).
+  ///
+  /// On a phone it is the callback address marked `status=cancelled`, which
+  /// the in-app browser recognises. On the web it is the top-up screen.
+  static String get paymentCancelUrl {
+    if (kIsWeb) return '${Uri.base.origin}/#/wallet/top-up';
+    final callback = Uri.parse(paymentCallbackUrl);
+    return callback.replace(
+      queryParameters: {...callback.queryParameters, 'status': 'cancelled'},
+    ).toString();
   }
 }

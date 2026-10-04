@@ -38,15 +38,41 @@ class PaymentActionController extends AsyncNotifier<Payment?> {
             amountCents: draft.amountCents,
             provider: draft.provider,
             callbackUrl: AppConfig.paymentCallbackUrl,
+            cancelUrl: AppConfig.paymentCancelUrl,
           ),
     );
     return state.value;
   }
 }
 
+/// How many times, and how often, a payment that is still pending is checked
+/// again before the screen stops waiting (about 25 seconds in all).
+const _verificationAttempts = 9;
+const _verificationInterval = Duration(seconds: 3);
+
+/// Asks the server to confirm a payment with the provider and credit the
+/// wallet.
+///
+/// Card payments are confirmed on the first check. A bank transfer or USSD
+/// payment can take a little longer, so while the provider still reports the
+/// payment as pending this keeps checking for a short while. If it is still
+/// pending after that, nothing is lost: the provider's webhook credits the
+/// wallet when the money arrives, whether or not the app is open.
 final paymentVerificationProvider = FutureProvider.autoDispose.family<Payment, String>((ref, reference) async {
-  final payment = await ref.read(appGatewayProvider).verifyPayment(reference);
-  if (payment.isSuccessful) {
+  var disposed = false;
+  ref.onDispose(() => disposed = true);
+  final gateway = ref.read(appGatewayProvider);
+
+  var payment = await gateway.verifyPayment(reference);
+  for (var attempt = 1;
+      attempt < _verificationAttempts && !payment.isFinal && !disposed;
+      attempt++) {
+    await Future<void>.delayed(_verificationInterval);
+    if (disposed) break;
+    payment = await gateway.verifyPayment(reference);
+  }
+
+  if (payment.isSuccessful && !disposed) {
     ref.invalidate(walletProvider);
     ref.invalidate(dashboardProvider);
   }
