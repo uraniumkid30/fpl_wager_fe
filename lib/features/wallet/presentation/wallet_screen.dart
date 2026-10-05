@@ -80,12 +80,10 @@ class WalletScreen extends ConsumerWidget {
                         const SizedBox(width: 10),
                         Expanded(
                           child: OutlinedButton(
-                            onPressed: () {
-                              AppNotice.info(
-                                context,
-                                'Withdrawals require payment-provider onboarding.',
-                              );
-                            },
+                            // Opens Withdraw, which asks for a verified
+                            // email and a bank account first if either is
+                            // missing.
+                            onPressed: () => context.push('/withdraw'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.white,
                             ),
@@ -218,6 +216,14 @@ class _LedgerRow extends StatelessWidget {
                   entry.description,
                   style: Theme.of(context).textTheme.titleSmall,
                 ),
+                // A withdrawal names the account it was sent to.
+                if (entry.bank != null)
+                  Text(
+                    entry.bank!.accountName,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+                  ),
                 Text(
                   DateFormat('d MMM · HH:mm').format(entry.createdAt.toLocal()),
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(

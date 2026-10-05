@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +6,7 @@ import 'package:go_router/go_router.dart';
 
 import 'package:fpl_wager/app/router/app_shell.dart';
 import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
+import 'package:fpl_wager/features/auth/presentation/email_sign_in_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/fpl_login_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/splash_screen.dart';
 import 'package:fpl_wager/features/auth/presentation/verify_email_screen.dart';
@@ -22,6 +24,8 @@ import 'package:fpl_wager/features/pools/presentation/pools_screen.dart';
 import 'package:fpl_wager/features/profile/presentation/profile_screen.dart';
 import 'package:fpl_wager/features/settings/presentation/settings_screen.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_screen.dart';
+import 'package:fpl_wager/features/withdrawals/presentation/bank_account_screen.dart';
+import 'package:fpl_wager/features/withdrawals/presentation/withdraw_screen.dart';
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
@@ -33,11 +37,16 @@ final routerProvider = Provider<GoRouter>((ref) {
     initialLocation: '/dashboard',
     redirect: (context, state) {
       final location = state.matchedLocation;
-      final public = location == '/welcome' || location == '/fpl-login';
+      final public = location == '/welcome' ||
+          location == '/fpl-login' ||
+          location == '/email-sign-in';
       if (auth.isLoading) return location == '/splash' ? null : '/splash';
+      // FPL's sign-in needs the in-app browser of the mobile app. In a web
+      // browser that page cannot work, so it is never shown there.
+      if (kIsWeb && location == '/fpl-login') return '/welcome';
       // Anyone who is not signed in — first launch, or just signed out —
       // lands on the app's own welcome page. FPL's login only opens when
-      // they tap "Continue with FPL" there.
+      // they tap "Sign in with FPL" there.
       if (!signedIn) return public ? null : '/welcome';
       if (public || location == '/splash') return '/dashboard';
       return null;
@@ -46,6 +55,10 @@ final routerProvider = Provider<GoRouter>((ref) {
       GoRoute(path: '/splash', builder: (_, _) => const SplashScreen()),
       GoRoute(path: '/welcome', builder: (_, _) => const WelcomeScreen()),
       GoRoute(path: '/fpl-login', builder: (_, _) => const FplLoginScreen()),
+      GoRoute(
+        path: '/email-sign-in',
+        builder: (_, _) => const EmailSignInScreen(),
+      ),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
@@ -124,6 +137,18 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/settings',
         builder: (_, _) => const SettingsScreen(),
       ),
+      // Withdrawing, and the bank account it is paid to. Both are reached
+      // from Profile and open as full pages over the tabs, like Top up.
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/withdraw',
+        builder: (_, _) => const WithdrawScreen(),
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/bank-account',
+        builder: (_, _) => const BankAccountScreen(),
+      ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,
         path: '/wallet/top-up',
@@ -133,8 +158,14 @@ final routerProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         path: '/payments/callback',
         builder: (_, state) => PaymentCallbackScreen(
+          // The provider adds the reference to the callback address. On the
+          // web that address ends in "#/payments/callback", and a provider
+          // may put its query before the "#" instead of after it, so both
+          // places are checked.
           reference: state.uri.queryParameters['reference'] ??
               state.uri.queryParameters['trxref'] ??
+              Uri.base.queryParameters['reference'] ??
+              Uri.base.queryParameters['trxref'] ??
               '',
         ),
       ),

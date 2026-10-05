@@ -1,10 +1,27 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
+import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:go_router/go_router.dart';
 
 class WelcomeScreen extends StatelessWidget {
   const WelcomeScreen({super.key});
+
+  /// FPL sign-in reads the session from FPL's own login page inside an
+  /// in-app browser. A web page is not allowed to do that to another site,
+  /// so in a browser this button explains what to do instead.
+  void _signInWithFpl(BuildContext context) {
+    if (kIsWeb) {
+      AppNotice.info(
+        context,
+        'Sign in with FPL works in the FPLwager mobile app. Sign in there '
+        'once and verify your email, then use Sign in with email here.',
+      );
+      return;
+    }
+    context.go('/fpl-login');
+  }
 
   @override
   Widget build(BuildContext context) => Scaffold(
@@ -19,13 +36,26 @@ class WelcomeScreen extends StatelessWidget {
             ),
           ),
           child: SafeArea(
-            child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.lg),
-              child: Column(
+            // The page fills the screen, with the buttons at the bottom, and
+            // scrolls instead of overflowing on a small phone or with large
+            // text.
+            child: LayoutBuilder(
+              builder: (context, constraints) => SingleChildScrollView(
+                padding: const EdgeInsets.all(AppSpacing.lg),
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    // The space left inside the padding above and below.
+                    minHeight: constraints.maxHeight > 2 * AppSpacing.lg
+                        ? constraints.maxHeight - 2 * AppSpacing.lg
+                        : 0.0,
+                  ),
+                  child: IntrinsicHeight(
+                    child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Align(alignment: Alignment.centerLeft, child: BrandMark()),
                   const Spacer(),
+                  const SizedBox(height: 24),
                   FadeSlideIn(
                     child: Container(
                       width: 92,
@@ -57,16 +87,24 @@ class WelcomeScreen extends StatelessWidget {
                     ),
                   ),
                   const Spacer(),
+                  const SizedBox(height: 28),
                   FilledButton.icon(
-                    onPressed: () => context.go('/fpl-login'),
+                    onPressed: () => _signInWithFpl(context),
                     icon: const Icon(Icons.sports_soccer_rounded),
-                    label: const Text('Continue with FPL'),
+                    label: const Text('Sign in with FPL'),
                   ),
-                  const SizedBox(height: 8),
+                  const SizedBox(height: 10),
+                  OutlinedButton.icon(
+                    onPressed: () => context.go('/email-sign-in'),
+                    icon: const Icon(Icons.mail_outline_rounded),
+                    label: const Text('Sign in with email'),
+                  ),
+                  const SizedBox(height: 10),
                   Text(
-                    'Sign in with your real FPL account. We open the official '
-                    'Fantasy Premier League login — your password is typed '
-                    'directly into their page, never ours.',
+                    'New here? Use Sign in with FPL: it opens the official '
+                    'Fantasy Premier League login, where your password goes '
+                    'straight to them and never to us. Once you have verified '
+                    'your email you can also sign in with email.',
                     textAlign: TextAlign.center,
                     style: Theme.of(context).textTheme.bodySmall?.copyWith(
                           color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -79,6 +117,9 @@ class WelcomeScreen extends StatelessWidget {
                     style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                 ],
+                    ),
+                  ),
+                ),
               ),
             ),
           ),

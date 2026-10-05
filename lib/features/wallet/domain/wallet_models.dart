@@ -1,3 +1,5 @@
+import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
+
 class WalletSummary {
   const WalletSummary({
     required this.availableCents,
@@ -25,6 +27,7 @@ class LedgerEntry {
     required this.description,
     required this.amountCents,
     required this.createdAt,
+    this.meta = const {},
   });
 
   factory LedgerEntry.fromJson(Map<String, Object?> json) => LedgerEntry(
@@ -33,6 +36,9 @@ class LedgerEntry {
         description: json['description']! as String,
         amountCents: (json['amount_cents']! as num).toInt(),
         createdAt: DateTime.parse(json['created_at']! as String),
+        meta: json['meta'] is Map<Object?, Object?>
+            ? Map<String, Object?>.from(json['meta']! as Map<Object?, Object?>)
+            : const {},
       );
 
   final String id;
@@ -40,5 +46,15 @@ class LedgerEntry {
   final String description;
   final int amountCents;
   final DateTime createdAt;
+
+  /// Extra detail the server recorded with the entry. A withdrawal (and its
+  /// refund, if any) carries the bank account the money was sent to.
+  final Map<String, Object?> meta;
+
+  /// The bank account a withdrawal entry was paid to; null for other entries.
+  BankAccount? get bank => BankAccount.maybeFrom(meta['bank_details']);
+
+  /// Why a withdrawal was refunded, when the server recorded a reason.
+  String get reason => meta['reason'] as String? ?? '';
 }
 

@@ -3,10 +3,25 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/ui/app_header.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
+import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:intl/intl.dart';
 
 class HistoryScreen extends ConsumerWidget {
   const HistoryScreen({super.key});
+
+  /// The line under an entry: what kind it is, when it happened and — for a
+  /// withdrawal or its refund — the bank account it was sent to.
+  static String _details(LedgerEntry entry) {
+    final bank = entry.bank;
+    return [
+      '${entry.kind.replaceAll('_', ' ')} · '
+          '${DateFormat('d MMM y · HH:mm').format(entry.createdAt.toLocal())}',
+      if (bank != null) '${bank.bankName} · ${bank.accountNumber}',
+      if (bank != null) bank.accountName,
+      if (entry.reason.isNotEmpty) 'Reason: ${entry.reason}',
+    ].join('\n');
+  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -26,7 +41,7 @@ class HistoryScreen extends ConsumerWidget {
                 padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 120),
                 children: [
                   Text(
-                    'A complete record of stakes, refunds and winnings.',
+                    'A complete record of stakes, refunds, winnings and withdrawals.',
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurfaceVariant),
                   ),
                   const SizedBox(height: 18),
@@ -45,8 +60,9 @@ class HistoryScreen extends ConsumerWidget {
                                 ? AppColors.emerald
                                 : AppColors.purple,
                           ),
+                          isThreeLine: entry.bank != null,
                           title: Text(entry.description),
-                          subtitle: Text(entry.kind.replaceAll('_', ' ')),
+                          subtitle: Text(_details(entry)),
                           trailing: Text(
                             money(entry.amountCents),
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(

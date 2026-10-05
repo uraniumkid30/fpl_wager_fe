@@ -7,10 +7,12 @@ import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
 import 'package:fpl_wager/features/dashboard/domain/dashboard.dart';
 import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fpl_wager/features/withdrawals/presentation/withdrawal_controller.dart';
 import 'package:go_router/go_router.dart';
 
 /// The Profile tab: who you are (account name, FPL ID, email) first, then
-/// Wallet and History, which open as pages underneath this one.
+/// Wallet (with Top up and Withdraw), the bank account withdrawals are paid
+/// to, and History. Each opens as a page underneath this one.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
@@ -23,6 +25,7 @@ class ProfileScreen extends ConsumerWidget {
         onRefresh: () async {
           ref.invalidate(dashboardProvider);
           ref.invalidate(walletProvider);
+          ref.invalidate(bankAccountProvider);
           await ref.read(dashboardProvider.future);
         },
         child: AsyncContent(
@@ -46,6 +49,7 @@ class _ProfileBody extends ConsumerWidget {
     final team = value.team;
     final fplId = team?.entryId ?? user.fplEntryId;
     final ledgerCount = value.wallet.ledger.length;
+    final bankAccount = ref.watch(bankAccountProvider);
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
@@ -190,8 +194,8 @@ class _ProfileBody extends ConsumerWidget {
                   const SizedBox(width: 10),
                   Expanded(
                     child: OutlinedButton(
-                      onPressed: () => context.go('/profile/wallet'),
-                      child: const Text('Open wallet'),
+                      onPressed: () => context.push('/withdraw'),
+                      child: const Text('Withdraw'),
                     ),
                   ),
                 ],
@@ -200,13 +204,28 @@ class _ProfileBody extends ConsumerWidget {
           ),
         ),
 
+        // ── Bank account ───────────────────────────────────────────────
+        const SizedBox(height: 12),
+        _LinkTile(
+          icon: Icons.account_balance_outlined,
+          title: 'Bank account',
+          subtitle: bankAccount.when(
+            data: (account) => account == null
+                ? 'Add the account your withdrawals are paid to'
+                : '${account.summary} · ${account.accountName}',
+            loading: () => 'Loading…',
+            error: (_, _) => 'Tap to view your bank account',
+          ),
+          onTap: () => context.push('/bank-account'),
+        ),
+
         // ── History ────────────────────────────────────────────────────
         const SizedBox(height: 26),
         Text('History', style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 10),
         _LinkTile(
           icon: Icons.history_rounded,
-          title: 'Stakes, refunds and winnings',
+          title: 'Stakes, winnings and withdrawals',
           subtitle: ledgerCount == 0
               ? 'Nothing yet — your activity appears after you play.'
               : '$ledgerCount recent ${ledgerCount == 1 ? 'entry' : 'entries'}',

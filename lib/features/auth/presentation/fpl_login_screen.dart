@@ -10,7 +10,7 @@ import 'package:fpl_wager/core/errors/app_exception.dart';
 import 'package:fpl_wager/core/network/providers.dart';
 import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
 
-/// "Continue with FPL" — the sole account entry point.
+/// "Sign in with FPL" — the sole account entry point.
 ///
 /// Opens FPL's real login page inside a WebView. The user types their own
 /// FPL email and password directly into fantasy.premierleague.com's own
@@ -221,7 +221,7 @@ class _FplLoginScreenState extends ConsumerState<FplLoginScreen> {
   @override
   Widget build(BuildContext context) => Scaffold(
         appBar: AppBar(
-          title: const Text('Continue with FPL'),
+          title: const Text('Sign in with FPL'),
           leading: IconButton(
             icon: const Icon(Icons.close_rounded),
             onPressed: () => context.go('/welcome'),

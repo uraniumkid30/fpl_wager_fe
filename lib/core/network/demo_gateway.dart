@@ -8,6 +8,7 @@ import 'package:fpl_wager/features/settings/domain/app_settings.dart';
 import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
 import 'package:fpl_wager/features/payments/domain/payment.dart';
 import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
+import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
 import 'package:uuid/uuid.dart';
 
 class DemoGateway implements AppGateway {
@@ -27,6 +28,14 @@ class DemoGateway implements AppGateway {
     Pool(id: 'auto-5000', name: 'GW2 Auto Pool · ₦5,000', gameweek: 2, stakeCents: 500000, prizePoolCents: 0, status: 'open', memberCount: 0, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
     Pool(id: 'pool-3', name: 'Chris pool', gameweek: 2, stakeCents: 100000, prizePoolCents: 0, status: 'draft', memberCount: 0, rules: 'Highest score in the gameweek wins.', deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), approvalRequired: true),
   ];
+  BankAccount? _bankAccount;
+  final List<Withdrawal> _withdrawals = [];
+  static const _demoBanks = [
+    Bank(name: 'Access Bank', code: '044'),
+    Bank(name: 'Guaranty Trust Bank', code: '058'),
+    Bank(name: 'Kuda Bank', code: '50211'),
+    Bank(name: 'Zenith Bank', code: '057'),
+  ];
   final List<Challenge> _challenges = [];
   final List<AppNotification> _notifications = [];
 
@@ -38,6 +47,10 @@ class DemoGateway implements AppGateway {
   Future<AuthSession?> restoreSession() async { await _wait(); return _session; }
   @override
   Future<AuthSession> continueWithFpl({required String refreshToken, Map<String, Object?>? session}) async { await _wait(); return _session = _newSession(_user('demo-manager@fplwager.local', 'Demo Manager')); }
+  @override
+  Future<VerificationChallenge> requestEmailSignIn(String email) async { await _wait(); return VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/auth/email/login/verify', expiresInSeconds: 600); }
+  @override
+  Future<AuthSession> verifyEmailSignIn(String email, String otp) async { await _wait(); return _session = _newSession(UserProfile(id: 'demo-user', fullName: 'Demo Manager', email: email, emailVerified: true, fplEntryId: 1234567)); }
   @override
   Future<VerificationChallenge> requestEmailVerification(String email) async { await _wait(); return VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/me/email/verify', expiresInSeconds: 600); }
   @override
@@ -77,6 +90,20 @@ class DemoGateway implements AppGateway {
   Future<Payment> initializePayment({required int amountCents, required String provider, required String callbackUrl, required String cancelUrl}) async { await _wait(); return Payment(id: _uuid.v4(), userId: 'demo-user', provider: provider, credentialMode: 'test', reference: 'demo-payment', amountCents: amountCents, currency: 'NGN', status: 'pending', checkoutUrl: callbackUrl); }
   @override
   Future<Payment> verifyPayment(String reference) async { await _wait(); return Payment(id: 'demo-payment-id', userId: 'demo-user', provider: 'paystack', credentialMode: 'test', reference: reference, amountCents: 100000, currency: 'NGN', status: 'succeeded'); }
+  @override
+  Future<List<Bank>> banks() async { await _wait(); return _demoBanks; }
+  @override
+  Future<BankAccount?> bankAccount() async { await _wait(); return _bankAccount; }
+  @override
+  Future<BankAccount> resolveBankAccount({required String bankCode, required String accountNumber}) async { await _wait(); return BankAccount(bankCode: bankCode, bankName: _demoBanks.firstWhere((bank) => bank.code == bankCode, orElse: () => _demoBanks.first).name, accountNumber: accountNumber, accountName: (_session?.user.fullName ?? 'Demo Manager').toUpperCase()); }
+  @override
+  Future<BankAccount> saveBankAccount({required String bankCode, required String accountNumber}) async => _bankAccount = await resolveBankAccount(bankCode: bankCode, accountNumber: accountNumber);
+  @override
+  Future<void> deleteBankAccount() async { await _wait(); _bankAccount = null; }
+  @override
+  Future<WithdrawalOverview> withdrawals() async { await _wait(); return WithdrawalOverview(items: List.unmodifiable(_withdrawals), minimumCents: 100000); }
+  @override
+  Future<Withdrawal> requestWithdrawal({required int amountCents, required String idempotencyKey}) async { await _wait(); final item = Withdrawal(id: _uuid.v4(), reference: 'wd_demo', amountCents: amountCents, status: 'pending_approval', createdAt: DateTime.now(), bank: _bankAccount); _withdrawals.insert(0, item); _balance -= amountCents; _ledger.insert(0, LedgerEntry(id: _uuid.v4(), kind: 'withdrawal', description: 'Withdrawal to ${_bankAccount?.summary ?? 'bank'}', amountCents: -amountCents, createdAt: DateTime.now())); return item; }
   @override
   Future<AppSettings> updateSettings(AppSettings settings) async { await _wait(); return _settings = settings; }
 }

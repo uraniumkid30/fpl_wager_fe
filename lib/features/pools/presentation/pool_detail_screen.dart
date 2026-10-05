@@ -383,6 +383,16 @@ class _Leader extends StatelessWidget {
           child: Text(member.rank == 0 ? '–' : '${member.rank}'),
         ),
         title: Text(member.displayName),
+        // Shown once the pool is settled, for the entries that were paid.
+        subtitle: member.payoutCents > 0
+            ? Text(
+                'Won ${money(member.payoutCents)}',
+                style: const TextStyle(
+                  color: AppColors.emerald,
+                  fontWeight: FontWeight.w700,
+                ),
+              )
+            : null,
         trailing: Text(
           '${member.points}',
           style: Theme.of(context).textTheme.titleMedium,

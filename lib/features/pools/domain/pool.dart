@@ -86,17 +86,23 @@ class PoolMember {
     required this.displayName,
     required this.rank,
     required this.points,
+    this.payoutCents = 0,
   });
 
   factory PoolMember.fromJson(Map<String, Object?> json) => PoolMember(
         displayName: json['display_name']! as String,
         rank: (json['rank']! as num).toInt(),
         points: (json['points']! as num).toInt(),
+        payoutCents: (json['payout_cents'] as num?)?.toInt() ?? 0,
       );
 
   final String displayName;
   final int rank;
   final int points;
+
+  /// What this entry won once the pool was settled; zero until then, and for
+  /// entries that finished outside the paid places.
+  final int payoutCents;
 }
 
 /// One paid place. [percent] is that place's share of the prize pool (the

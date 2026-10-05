@@ -29,7 +29,7 @@ class UserProfile {
   final String role;
 
   /// True once the address has been confirmed with a code. Accounts created
-  /// with "Continue with FPL" start unverified.
+  /// with "Sign in with FPL" start unverified.
   final bool emailVerified;
 
   /// The FPL entry this account proved it owns by signing in with FPL.

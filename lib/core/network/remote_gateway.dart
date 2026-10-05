@@ -11,6 +11,7 @@ import 'package:fpl_wager/features/settings/domain/app_settings.dart';
 import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
 import 'package:fpl_wager/features/payments/domain/payment.dart';
 import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
+import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
 import 'package:uuid/uuid.dart';
 
 class RemoteGateway implements AppGateway {
@@ -51,6 +52,26 @@ class RemoteGateway implements AppGateway {
             'refresh_token': refreshToken,
             if (session != null) 'session': session,
           },
+        ),
+      );
+
+  @override
+  Future<VerificationChallenge> requestEmailSignIn(String email) async =>
+      VerificationChallenge.fromJson(
+        await _client.post(
+          '/auth/email/login',
+          allowRefresh: false,
+          data: {'email': email},
+        ),
+      );
+
+  @override
+  Future<AuthSession> verifyEmailSignIn(String email, String otp) async =>
+      _saveTokenResponse(
+        await _client.post(
+          '/auth/email/login/verify',
+          allowRefresh: false,
+          data: {'email': email, 'otp': otp},
         ),
       );
 
@@ -246,6 +267,64 @@ class RemoteGateway implements AppGateway {
   @override
   Future<Payment> verifyPayment(String reference) async =>
       Payment.fromJson(await _client.get('/payments/$reference'));
+
+  @override
+  Future<List<Bank>> banks() async {
+    final body = await _client.get('/banks');
+    return _list(body, 'items').map(Bank.fromJson).toList();
+  }
+
+  @override
+  Future<BankAccount?> bankAccount() async {
+    final body = await _client.get('/bank-account');
+    return BankAccount.maybeFrom(body['bank_account']);
+  }
+
+  @override
+  Future<BankAccount> resolveBankAccount({
+    required String bankCode,
+    required String accountNumber,
+  }) async {
+    final body = await _client.post(
+      '/bank-account/resolve',
+      data: {'bank_code': bankCode, 'account_number': accountNumber},
+    );
+    return BankAccount.fromJson(_json(body, 'bank_account'));
+  }
+
+  @override
+  Future<BankAccount> saveBankAccount({
+    required String bankCode,
+    required String accountNumber,
+  }) async {
+    final body = await _client.put(
+      '/bank-account',
+      data: {'bank_code': bankCode, 'account_number': accountNumber},
+    );
+    return BankAccount.fromJson(_json(body, 'bank_account'));
+  }
+
+  @override
+  Future<void> deleteBankAccount() async {
+    await _client.delete('/bank-account');
+  }
+
+  @override
+  Future<WithdrawalOverview> withdrawals() async =>
+      WithdrawalOverview.fromJson(await _client.get('/withdrawals'));
+
+  @override
+  Future<Withdrawal> requestWithdrawal({
+    required int amountCents,
+    required String idempotencyKey,
+  }) async =>
+      Withdrawal.fromJson(
+        await _client.post(
+          '/withdrawals',
+          idempotencyKey: idempotencyKey,
+          data: {'amount_cents': amountCents},
+        ),
+      );
 
   @override
   Future<AppSettings> updateSettings(AppSettings settings) async =>
