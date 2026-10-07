@@ -60,7 +60,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
-    initialLocation: '/dashboard',
+    initialLocation: '/home',
     refreshListenable: authChanges,
     redirect: (context, state) {
       final auth = ref.read(authControllerProvider);
@@ -94,7 +94,7 @@ final routerProvider = Provider<GoRouter>((ref) {
         return public ? null : '/welcome';
       }
       if (public || location == '/splash') {
-        final target = _returnTo ?? '/dashboard';
+        final target = _returnTo ?? '/home';
         _returnTo = null;
         return target;
       }
@@ -108,13 +108,15 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/email-sign-in',
         builder: (_, _) => const EmailSignInScreen(),
       ),
+      // The home page used to be called the dashboard; old links still work.
+      GoRoute(path: '/dashboard', redirect: (_, _) => '/home'),
       StatefulShellRoute.indexedStack(
         builder: (context, state, shell) => AppShell(navigationShell: shell),
         branches: [
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: '/dashboard',
+                path: '/home',
                 pageBuilder: (_, state) =>
                     const NoTransitionPage(child: DashboardScreen()),
               ),

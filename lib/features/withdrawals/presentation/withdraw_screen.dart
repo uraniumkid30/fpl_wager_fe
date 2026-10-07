@@ -14,14 +14,6 @@ import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 import 'package:uuid/uuid.dart';
 
-/// Amounts on this screen, to the kobo. The shared [money] helper rounds to
-/// whole naira, which is right for a dashboard but wrong where someone can
-/// type, and withdraw, an amount with kobo in it.
-String _exact(int cents) => cents % 100 == 0
-    ? money(cents)
-    : NumberFormat.currency(locale: 'en_NG', symbol: '₦', decimalDigits: 2)
-        .format(cents / 100);
-
 /// Profile → Withdraw.
 ///
 /// Before a user can withdraw they need a verified email and a bank account.
@@ -87,7 +79,7 @@ class _WithdrawBody extends ConsumerWidget {
               ),
               const SizedBox(height: 8),
               Text(
-                _exact(dashboard.wallet.availableCents),
+                money(dashboard.wallet.availableCents),
                 style: Theme.of(context).textTheme.displaySmall?.copyWith(
                       color: AppColors.lime,
                       fontWeight: FontWeight.w900,
@@ -395,7 +387,7 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
       return 'The minimum is ${money(widget.minimumCents)}';
     }
     if (cents > widget.availableCents) {
-      return 'You have ${_exact(widget.availableCents)} available';
+      return 'You have ${money(widget.availableCents)} available';
     }
     return null;
   }
@@ -408,7 +400,7 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        title: Text('Withdraw ${_exact(cents)}?'),
+        title: Text('Withdraw ${money(cents)}?'),
         content: Text(
           'To ${widget.bank.accountName}\n${widget.bank.summary}\n\n'
           'An administrator reviews the request before it is paid.',
@@ -474,7 +466,7 @@ class _WithdrawalTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  _exact(item.amountCents),
+                  money(item.amountCents),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
                       ),

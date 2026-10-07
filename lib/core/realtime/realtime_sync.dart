@@ -25,6 +25,7 @@ final realtimeSyncProvider = Provider<RealtimeSync?>((ref) {
     client: ref.watch(apiClientProvider),
     onResources: (resources, resourceId) =>
         _invalidate(ref, resources, resourceId),
+    onReconnected: () => _catchUp(ref),
   )..start();
   ref.onDispose(sync.dispose);
   return sync;
@@ -52,11 +53,36 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
   if (resources.contains('bank_account')) ref.invalidate(bankAccountProvider);
 }
 
+/// The connection was lost and has come back. Whatever the server announced
+/// in between was missed, so everything that may be on screen is loaded
+/// again.
+void _catchUp(Ref ref) {
+  ref.invalidate(dashboardProvider);
+  ref.invalidate(walletProvider);
+  ref.invalidate(poolsProvider);
+  ref.invalidate(poolProvider);
+  ref.invalidate(challengesProvider);
+  ref.invalidate(notificationsProvider);
+  ref.invalidate(withdrawalsProvider);
+}
+
 final class RealtimeSync {
-  RealtimeSync({required this.client, required this.onResources});
+  RealtimeSync({
+    required this.client,
+    required this.onResources,
+    this.onReconnected,
+  });
 
   final ApiClient client;
   final void Function(Set<String> resources, String? resourceId) onResources;
+
+  /// Called each time the connection is made again after having been lost
+  /// (not the first time it is made).
+  final void Function()? onReconnected;
+
+  /// Whether the live connection is up right now.
+  bool get isConnected => _socket != null;
+  bool _connectedBefore = false;
   final _random = Random();
 
   RealtimeSocket? _socket;
@@ -84,6 +110,8 @@ final class RealtimeSync {
         }
         _socket = socket;
         _attempt = 0;
+        if (_connectedBefore) onReconnected?.call();
+        _connectedBefore = true;
         _messages = socket.messages.listen(
           _handleMessage,
           onError: (_) {},

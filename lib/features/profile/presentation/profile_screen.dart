@@ -158,7 +158,7 @@ class _ProfileBody extends ConsumerWidget {
                               ),
                         ),
                         const SizedBox(height: 6),
-                        Text(
+                        FitText(
                           money(value.wallet.availableCents),
                           style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                                 color: AppColors.purple,

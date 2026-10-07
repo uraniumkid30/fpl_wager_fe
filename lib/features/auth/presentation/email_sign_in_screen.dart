@@ -296,7 +296,7 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
           .verifyEmailSignIn(sentTo, _code.text.trim());
       if (!mounted) return;
       ref.read(authControllerProvider.notifier).accept(session);
-      context.go('/dashboard');
+      context.go('/home');
     } on Object catch (error) {
       if (mounted) AppNotice.error(context, error);
     } finally {

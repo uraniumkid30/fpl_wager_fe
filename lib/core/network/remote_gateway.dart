@@ -22,6 +22,10 @@ class RemoteGateway implements AppGateway {
   final SessionStore _sessions;
   final _uuid = const Uuid();
   StoredTokens? _tokens;
+
+  /// Set when the server turns out not to have the balance-only endpoint
+  /// (an older version of the API); the full wallet is asked for instead.
+  bool _balanceEndpointMissing = false;
   Future<String?>? _refreshing;
 
   @override
@@ -281,6 +285,25 @@ class RemoteGateway implements AppGateway {
 
   @override
   Future<WalletSummary> wallet() async => WalletSummary.fromJson(await _client.get('/wallet'));
+
+  @override
+  Future<WalletBalance> walletBalance() async {
+    if (!_balanceEndpointMissing) {
+      try {
+        return WalletBalance.fromJson(await _client.get('/wallet/balance'));
+      } on ValidationException catch (error) {
+        // A refusal with no error code is the server saying the address
+        // does not exist. Anything else is a real answer and is passed on.
+        if (error.code != null) rethrow;
+        _balanceEndpointMissing = true;
+      }
+    }
+    final full = await wallet();
+    return WalletBalance(
+      availableCents: full.availableCents,
+      lockedCents: full.lockedCents,
+    );
+  }
 
   @override
   Future<WalletSummary> creditWallet(int amountCents) async => WalletSummary.fromJson(

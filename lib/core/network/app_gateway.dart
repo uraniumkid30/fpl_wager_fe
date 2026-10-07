@@ -83,6 +83,10 @@ abstract interface class AppGateway {
   Future<List<Challenge>> challenges();
   Future<Challenge> createChallenge({required int opponentTeamId, required int gameweek, required int stakeCents});
   Future<WalletSummary> wallet();
+
+  /// The wallet's balances without its history. It is a small request the
+  /// app repeats to keep the balance on screen current.
+  Future<WalletBalance> walletBalance();
   Future<WalletSummary> creditWallet(int amountCents);
   Future<Payment> initializePayment({
     required int amountCents,

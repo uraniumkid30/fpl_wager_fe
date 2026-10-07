@@ -670,7 +670,7 @@ class _HeroValue extends StatelessWidget {
             ),
           ),
           const SizedBox(height: 4),
-          Text(
+          FitText(
             value,
             style: Theme.of(context).textTheme.headlineSmall?.copyWith(
                   color: color,

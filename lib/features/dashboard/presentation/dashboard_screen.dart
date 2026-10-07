@@ -152,47 +152,29 @@ class _Metrics extends StatelessWidget {
   final Dashboard value;
 
   @override
-  Widget build(BuildContext context) => LayoutBuilder(
-        builder: (context, constraints) {
-          final wide = constraints.maxWidth > 540;
-          final cards = <Widget>[
-            _Metric(icon: Icons.account_balance_wallet_outlined, label: 'Available balance', value: money(value.wallet.availableCents), accent: AppColors.purple),
-            _Metric(icon: Icons.bolt_rounded, label: 'Active entries', value: '${value.activeWagers}', accent: AppColors.lime),
-          ];
-          return Column(
-            children: [
-              if (wide)
-                Row(
-                  children: cards
-                      .map((item) => Expanded(
-                            child: Padding(
-                              padding: const EdgeInsets.only(right: 10),
-                              child: item,
-                            ),
-                          ))
-                      .toList(),
-                )
-              else
-                ...cards.map((item) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: item,
-                    )),
-              if (wide) const SizedBox(height: 14),
-              if (value.deadline == null)
-                const _Metric(
-                  icon: Icons.timer_outlined,
-                  label: 'FPL deadline',
-                  value: 'Schedule syncing',
-                  accent: Color(0xFF49D7F2),
-                )
-              else
-                FlipDeadlineCountdown(
-                  value.deadline!,
-                  gameweek: value.currentGameweek,
-                ),
-            ],
-          );
-        },
+  Widget build(BuildContext context) => Column(
+        children: [
+          // The wallet balance lives in the bar at the top of the page.
+          _Metric(
+            icon: Icons.bolt_rounded,
+            label: 'Active entries',
+            value: '${value.activeWagers}',
+            accent: AppColors.lime,
+          ),
+          const SizedBox(height: 12),
+          if (value.deadline == null)
+            const _Metric(
+              icon: Icons.timer_outlined,
+              label: 'FPL deadline',
+              value: 'Schedule syncing',
+              accent: Color(0xFF49D7F2),
+            )
+          else
+            FlipDeadlineCountdown(
+              value.deadline!,
+              gameweek: value.currentGameweek,
+            ),
+        ],
       );
 }
 

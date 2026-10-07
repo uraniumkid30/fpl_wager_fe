@@ -220,7 +220,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
       if (context.canPop()) {
         context.pop();
       } else {
-        context.go('/dashboard');
+        context.go('/home');
       }
     } on Object catch (error) {
       if (mounted) AppNotice.error(context, error);

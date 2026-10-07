@@ -172,7 +172,7 @@ class _FplLoginScreenState extends ConsumerState<FplLoginScreen> {
       );
       if (!mounted) return true;
       ref.read(authControllerProvider.notifier).accept(signedIn);
-      context.go('/dashboard');
+      context.go('/home');
     } catch (error) {
       debugPrint(
         'FPL sign-in failed: ${error.runtimeType} '

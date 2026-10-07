@@ -53,7 +53,7 @@ class WalletScreen extends ConsumerWidget {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
+                    FitText(
                       money(value.availableCents),
                       style: Theme.of(context).textTheme.displaySmall?.copyWith(
                         color: AppColors.purple,

@@ -20,6 +20,23 @@ class WalletSummary {
   final List<LedgerEntry> ledger;
 }
 
+/// The wallet's two figures on their own, in cents (kobo): what the app
+/// asks for when it only needs to know whether the balance has changed.
+class WalletBalance {
+  const WalletBalance({
+    required this.availableCents,
+    required this.lockedCents,
+  });
+
+  factory WalletBalance.fromJson(Map<String, Object?> json) => WalletBalance(
+        availableCents: (json['available_cents']! as num).toInt(),
+        lockedCents: (json['locked_cents']! as num).toInt(),
+      );
+
+  final int availableCents;
+  final int lockedCents;
+}
+
 class LedgerEntry {
   const LedgerEntry({
     required this.id,

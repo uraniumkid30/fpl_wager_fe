@@ -14,11 +14,33 @@ final _clockProvider = StreamProvider.autoDispose<DateTime>((ref) async* {
   );
 });
 
+/// An amount of money as people read it: "₦10.00" for 1000.
+///
+/// Every amount in the app is held in cents (kobo), 100 to the naira, and
+/// this is the one place that turns one into text. It always shows the two
+/// decimal places, so ₦10.50 is never rounded to ₦11.
 String money(int cents) => NumberFormat.currency(
       locale: 'en_NG',
       symbol: '₦',
-      decimalDigits: 0,
+      decimalDigits: 2,
     ).format(cents / 100);
+
+/// A figure in large type that shrinks to fit the space it has, instead of
+/// wrapping onto a second line or running off the edge when it is long
+/// ("₦1,250,000.00").
+class FitText extends StatelessWidget {
+  const FitText(this.text, {super.key, this.style});
+
+  final String text;
+  final TextStyle? style;
+
+  @override
+  Widget build(BuildContext context) => FittedBox(
+        fit: BoxFit.scaleDown,
+        alignment: AlignmentDirectional.centerStart,
+        child: Text(text, maxLines: 1, softWrap: false, style: style),
+      );
+}
 
 class BrandMark extends StatelessWidget {
   const BrandMark({super.key, this.compact = false});
