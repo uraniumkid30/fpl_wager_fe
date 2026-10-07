@@ -377,13 +377,25 @@ class _FlipClockUnit extends StatelessWidget {
 }
 
 class AsyncContent<T> extends StatelessWidget {
-  const AsyncContent({required this.value, required this.data, super.key, this.onRetry});
+  const AsyncContent({
+    required this.value,
+    required this.data,
+    super.key,
+    this.onRetry,
+    this.keepDataOnError = false,
+  });
   final AsyncValue<T> value;
   final Widget Function(T value) data;
   final VoidCallback? onRetry;
 
+  /// Keeps showing what was loaded before when a later reload fails, rather
+  /// than replacing it with the error. For pages that reload themselves in
+  /// the background, where one failed attempt should not blank the page.
+  final bool keepDataOnError;
+
   @override
   Widget build(BuildContext context) => value.when(
+        skipError: keepDataOnError,
         data: data,
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(

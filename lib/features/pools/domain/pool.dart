@@ -23,6 +23,8 @@ class Pool {
     this.creatorName = '',
     this.isCreator = false,
     this.manage,
+    this.ranked = false,
+    this.scoredAt,
   });
 
   factory Pool.fromJson(Map<String, Object?> json) => Pool(
@@ -56,6 +58,11 @@ class Pool {
         visibility: json['visibility'] as String? ?? 'public',
         creatorName: json['creator_name'] as String? ?? '',
         isCreator: json['is_creator'] as bool? ?? false,
+        // An older server does not say; a settled pool always has positions.
+        ranked: json['ranked'] as bool? ?? (json['status'] == 'settled'),
+        scoredAt: json['scored_at'] is String
+            ? DateTime.tryParse(json['scored_at']! as String)
+            : null,
         manage: json['manage'] is Map<Object?, Object?>
             ? PoolManage.fromJson(
                 Map<String, Object?>.from(json['manage']! as Map<Object?, Object?>),
@@ -99,6 +106,18 @@ class Pool {
   /// What the creator may still do with the pool. Only sent to the creator,
   /// and only on a pool's detail.
   final PoolManage? manage;
+
+  /// Whether the positions in [leaderboard] mean anything: the pool is
+  /// settled, or its gameweek is being played and points have been scored.
+  /// Before that every manager is level and has no position.
+  final bool ranked;
+
+  /// When the leaderboard was last worked out from FPL's live data.
+  final DateTime? scoredAt;
+
+  /// True while the pool's gameweek is being played: entries are closed and
+  /// the result is not final yet.
+  bool get isLive => status == 'locked' || status == 'scoring';
 
   bool get isPrivate => visibility == 'private';
 
@@ -171,23 +190,57 @@ class PoolMember {
     required this.displayName,
     required this.rank,
     required this.points,
+    this.userId = '',
+    this.status = 'active',
     this.payoutCents = 0,
+    this.projectedCents = 0,
+    this.isMe = false,
   });
 
   factory PoolMember.fromJson(Map<String, Object?> json) => PoolMember(
         displayName: json['display_name']! as String,
         rank: (json['rank']! as num).toInt(),
         points: (json['points']! as num).toInt(),
+        userId: json['user_id'] as String? ?? '',
+        status: json['status'] as String? ?? 'active',
         payoutCents: (json['payout_cents'] as num?)?.toInt() ?? 0,
+        projectedCents: (json['projected_cents'] as num?)?.toInt() ?? 0,
+        isMe: json['is_me'] as bool? ?? false,
       );
 
   final String displayName;
+
+  /// The manager's position, where level managers share one (1, 2, 2, 4).
+  /// Zero when there are no positions yet.
   final int rank;
   final int points;
+
+  /// The manager's account id; what tells one row from another.
+  final String userId;
+
+  /// "active" for a paid entry, "pending" for one still to be approved.
+  final String status;
+
+  /// What this entry would win if the gameweek ended on the table as it
+  /// stands. Only set while the gameweek is being played.
+  final int projectedCents;
+
+  /// True for the row of the person using the app.
+  final bool isMe;
+
+  bool get isPending => status == 'pending';
 
   /// What this entry won once the pool was settled; zero until then, and for
   /// entries that finished outside the paid places.
   final int payoutCents;
+}
+
+/// "st", "nd", "rd" or "th" for a position: 1st, 2nd, 3rd, 4th, 11th, 22nd.
+String ordinalSuffix(int place) {
+  // 11th, 12th and 13th are the exceptions to 1st, 2nd, 3rd.
+  final lastTwo = place % 100;
+  if (lastTwo >= 11 && lastTwo <= 13) return 'th';
+  return switch (place % 10) { 1 => 'st', 2 => 'nd', 3 => 'rd', _ => 'th' };
 }
 
 /// One paid place. [percent] is that place's share of the prize pool (the

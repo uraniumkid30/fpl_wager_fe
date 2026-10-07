@@ -42,6 +42,14 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
       ref.invalidate(poolProvider(resourceId));
     }
   }
+  // A pool's leaderboard moved (its gameweek is being played). Only the
+  // pages showing that pool reload; the list of pools does not change.
+  if (resources.contains('pool_standings')) {
+    if (resourceId != null && resourceId.isNotEmpty) {
+      ref.invalidate(poolProvider(resourceId));
+    }
+    ref.invalidate(poolInviteProvider);
+  }
   if (resources.contains('challenges')) ref.invalidate(challengesProvider);
   if (resources.contains('account')) {
     ref.invalidate(authControllerProvider);

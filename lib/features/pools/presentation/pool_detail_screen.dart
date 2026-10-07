@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -5,11 +7,13 @@ import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/config/app_config.dart';
 import 'package:fpl_wager/core/errors/app_exception.dart';
 import 'package:fpl_wager/core/network/providers.dart';
+import 'package:fpl_wager/core/realtime/realtime_sync.dart';
 import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
 import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
 import 'package:fpl_wager/features/pools/domain/pool.dart';
+import 'package:fpl_wager/features/pools/presentation/pool_leaderboard.dart';
 import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
 import 'package:fpl_wager/features/wallet/presentation/insufficient_funds.dart';
 import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
@@ -32,6 +36,9 @@ class PoolDetailScreen extends ConsumerWidget {
       ),
       body: AsyncContent(
         value: pool,
+        // The page reloads itself while the gameweek is live; one failed
+        // reload should not replace the table with an error.
+        keepDataOnError: true,
         onRetry: () => ref.invalidate(poolProvider(poolId)),
         data: (item) => _Body(
           item: item,
@@ -89,6 +96,8 @@ class JoinPoolScreen extends ConsumerWidget {
           title: const Text('Pool invite'),
         ),
         body: pool.when(
+          // As above: a failed background reload keeps the page.
+          skipError: true,
           loading: () => const Center(child: CircularProgressIndicator()),
           error: (error, _) => _InviteProblem(
             error: error,
@@ -234,7 +243,7 @@ class _Body extends StatelessWidget {
     final muted = Theme.of(context).colorScheme.onSurfaceVariant;
     final manage = item.manage;
     final live = item.status == 'draft' || item.status == 'open';
-    return ListView(
+    final page = ListView(
       padding: const EdgeInsets.fromLTRB(AppSpacing.md, 8, AppSpacing.md, 48),
       children: [
         GradientPanel(
@@ -374,27 +383,106 @@ class _Body extends StatelessWidget {
           GradientPanel(child: Text(item.rules)),
         ],
         const SizedBox(height: 26),
-        Text(
-          item.status == 'settled' ? 'Final standings' : 'Standings & prizes',
-          style: Theme.of(context).textTheme.titleLarge,
-        ),
-        const SizedBox(height: 4),
-        Text(
-          _standingsSentence(item),
-          style: Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
-        ),
-        const SizedBox(height: 12),
-        _Standings(item: item),
+        PoolLeaderboard(pool: item),
+        if (item.status != 'cancelled') ...[
+          const SizedBox(height: 26),
+          Text('Prizes', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 4),
+          Text(
+            _prizeSentence(item),
+            style:
+                Theme.of(context).textTheme.bodyMedium?.copyWith(color: muted),
+          ),
+          if (item.status != 'settled' && item.prizeSplit.isNotEmpty) ...[
+            const SizedBox(height: 12),
+            GradientPanel(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  _PrizeLadder(prizes: item.prizeSplit),
+                  if (item.status == 'open' || item.status == 'draft') ...[
+                    const SizedBox(height: 10),
+                    Text(
+                      'Prizes grow as more managers join.',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                            color: muted,
+                          ),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+          ],
+        ],
       ],
     );
+    // While the gameweek is being played the page keeps itself current.
+    return _LiveRefresh(active: item.isLive, onRefresh: onChanged, child: page);
   }
+}
+
+/// Reloads a pool that is in play every so often, so its leaderboard stays
+/// current even if the live connection is not available.
+///
+/// The server announces every change to the table over the live connection
+/// (see `realtime_sync.dart`), which reloads the page at once. This is the
+/// fallback: every 20 seconds without that connection, and once a minute
+/// with it in case an announcement was missed.
+class _LiveRefresh extends ConsumerStatefulWidget {
+  const _LiveRefresh({
+    required this.active,
+    required this.onRefresh,
+    required this.child,
+  });
+
+  /// Whether the pool is in play. Nothing is reloaded otherwise.
+  final bool active;
+  final VoidCallback onRefresh;
+  final Widget child;
+
+  @override
+  ConsumerState<_LiveRefresh> createState() => _LiveRefreshState();
+}
+
+class _LiveRefreshState extends ConsumerState<_LiveRefresh> {
+  Timer? _timer;
+  int _ticks = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _timer = Timer.periodic(const Duration(seconds: 20), (_) => _tick());
+  }
+
+  void _tick() {
+    if (!mounted || !widget.active) return;
+    // Nothing to keep current while the app is in the background.
+    final state = WidgetsBinding.instance.lifecycleState;
+    if (state == AppLifecycleState.paused ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.detached) {
+      return;
+    }
+    _ticks++;
+    final connected = ref.read(realtimeSyncProvider)?.isConnected ?? false;
+    if (!connected || _ticks % 3 == 0) widget.onRefresh();
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => widget.child;
 }
 
 /// The one line that sums up who wins what.
 ///
-/// Before the pool is settled: "Top 3 of 30 share ₦28,500 after the 5% fee."
-/// Afterwards: "3 of 30 managers shared ₦28,500."
-String _standingsSentence(Pool item) {
+/// Before the pool is settled: "Top 3 of 30 share ₦28,500.00 after the 5%
+/// fee." Afterwards: "3 of 30 managers shared ₦28,500.00."
+String _prizeSentence(Pool item) {
   final plan = item.payout;
   final entrants = plan?.entrants ?? item.memberCount;
 
@@ -422,72 +510,6 @@ String _standingsSentence(Pool item) {
     PoolDrawMethod.captains => '$line Ties go to captain points.',
     _ => line,
   };
-}
-
-/// Prizes and people in one panel.
-///
-/// While the pool is running it shows what each place wins and who is in.
-/// Once it is settled it becomes the final table: place, manager, points and
-/// what they won.
-class _Standings extends StatelessWidget {
-  const _Standings({required this.item});
-
-  final Pool item;
-
-  @override
-  Widget build(BuildContext context) {
-    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
-    final settled = item.status == 'settled';
-    final members = item.leaderboard;
-
-    if (settled) {
-      return GradientPanel(
-        child: members.isEmpty
-            ? const Text('Nobody was in this pool.')
-            : Column(
-                children:
-                    members.map((member) => _Leader(member: member)).toList(),
-              ),
-      );
-    }
-
-    return GradientPanel(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (item.prizeSplit.isNotEmpty) ...[
-            _PrizeLadder(prizes: item.prizeSplit),
-            const Divider(height: 28),
-          ],
-          Text(
-            members.isEmpty
-                ? 'Nobody is in yet'
-                : '${members.length} ${members.length == 1 ? 'manager' : 'managers'} in',
-            style: Theme.of(context).textTheme.labelLarge?.copyWith(color: muted),
-          ),
-          if (members.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: members
-                  .map((member) => _ManagerChip(name: member.displayName))
-                  .toList(),
-            ),
-          ],
-          const SizedBox(height: 14),
-          Text(
-            'Prizes grow as more managers join. Places are decided by official '
-            'FPL points after the gameweek.',
-            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                  color: muted,
-                  height: 1.35,
-                ),
-          ),
-        ],
-      ),
-    );
-  }
 }
 
 /// What each paid place wins. Shows the first few and lets the user open
@@ -573,44 +595,8 @@ class _PrizeLadderState extends State<_PrizeLadder> {
   }
 }
 
-class _ManagerChip extends StatelessWidget {
-  const _ManagerChip({required this.name});
-
-  final String name;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
-      decoration: BoxDecoration(
-        color: scheme.primary.withValues(alpha: 0.10),
-        borderRadius: BorderRadius.circular(999),
-      ),
-      child: Text(
-        name,
-        style: Theme.of(context).textTheme.labelLarge,
-      ),
-    );
-  }
-}
-
 /// "1st", "2nd", "3rd", "11th" and so on.
-String _ordinal(int place) {
-  // 11th, 12th and 13th are the exceptions to 1st, 2nd, 3rd.
-  final lastTwo = place % 100;
-  final last = place % 10;
-  final suffix = lastTwo >= 11 && lastTwo <= 13
-      ? 'th'
-      : last == 1
-          ? 'st'
-          : last == 2
-              ? 'nd'
-              : last == 3
-                  ? 'rd'
-                  : 'th';
-  return '$place$suffix';
-}
+String _ordinal(int place) => '$place${ordinalSuffix(place)}';
 
 class _HeroValue extends StatelessWidget {
   const _HeroValue({
@@ -644,37 +630,6 @@ class _HeroValue extends StatelessWidget {
                 ),
           ),
         ],
-      );
-}
-
-/// One row of the final table.
-class _Leader extends StatelessWidget {
-  const _Leader({required this.member});
-
-  final PoolMember member;
-
-  @override
-  Widget build(BuildContext context) => ListTile(
-        contentPadding: EdgeInsets.zero,
-        leading: CircleAvatar(
-          backgroundColor:
-              Theme.of(context).colorScheme.primary.withValues(alpha: 0.12),
-          child: Text(member.rank == 0 ? '–' : '${member.rank}'),
-        ),
-        title: Text(member.displayName),
-        subtitle: member.payoutCents > 0
-            ? Text(
-                'Won ${money(member.payoutCents)}',
-                style: const TextStyle(
-                  color: AppColors.emerald,
-                  fontWeight: FontWeight.w700,
-                ),
-              )
-            : null,
-        trailing: Text(
-          '${member.points} pts',
-          style: Theme.of(context).textTheme.titleMedium,
-        ),
       );
 }
 
