@@ -16,7 +16,7 @@ class FplWagerApp extends ConsumerWidget {
     final router = ref.watch(routerProvider);
     final themeMode = ref.watch(settingsControllerProvider).value?.themeMode ?? ThemeMode.system;
     return MaterialApp.router(
-      title: 'FPLwager',
+      title: 'FPLboardman',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.light,
       darkTheme: AppTheme.dark,

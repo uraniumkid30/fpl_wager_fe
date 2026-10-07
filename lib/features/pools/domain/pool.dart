@@ -19,6 +19,10 @@ class Pool {
     this.leaderboard = const [],
     this.prizeSplit = const [],
     this.payout,
+    this.visibility = 'public',
+    this.creatorName = '',
+    this.isCreator = false,
+    this.manage,
   });
 
   factory Pool.fromJson(Map<String, Object?> json) => Pool(
@@ -49,6 +53,14 @@ class Pool {
         payout: json['payout'] is Map<String, Object?>
             ? PayoutPlan.fromJson(json['payout']! as Map<String, Object?>)
             : null,
+        visibility: json['visibility'] as String? ?? 'public',
+        creatorName: json['creator_name'] as String? ?? '',
+        isCreator: json['is_creator'] as bool? ?? false,
+        manage: json['manage'] is Map<Object?, Object?>
+            ? PoolManage.fromJson(
+                Map<String, Object?>.from(json['manage']! as Map<Object?, Object?>),
+              )
+            : null,
       );
 
   final String id;
@@ -74,11 +86,84 @@ class Pool {
   /// pool's detail, not in lists.
   final PayoutPlan? payout;
 
+  /// "private" for a pool a user created: only its creator and the managers
+  /// they invite can see or enter it. Auto pools are "public".
+  final String visibility;
+
+  /// Who created a custom pool; empty for auto pools.
+  final String creatorName;
+
+  /// True when the signed-in user created this pool.
+  final bool isCreator;
+
+  /// What the creator may still do with the pool. Only sent to the creator,
+  /// and only on a pool's detail.
+  final PoolManage? manage;
+
+  bool get isPrivate => visibility == 'private';
+
+  /// True for a pool the signed-in user created. Lists do not carry
+  /// [isCreator], but only the creator is ever sent the invite code.
+  bool get isMine => isCreator || (inviteCode?.isNotEmpty ?? false);
+
   bool get hasJoined => membershipStatus == 'active';
   bool get isPending => membershipStatus == 'pending';
-  bool get canJoin => status == 'open' && membershipStatus == null;
+  /// An open pool can be entered by anyone who is not in it, including a
+  /// manager who left earlier and wants back in.
+  bool get canJoin =>
+      status == 'open' && (membershipStatus == null || hasLeft);
+
+  /// True for a manager who was in the pool and left it (their stake was
+  /// returned).
+  bool get hasLeft =>
+      membershipStatus == 'left' || membershipStatus == 'refunded';
   bool get isAuto => poolKind == 'auto';
   bool get awaitingAdminApproval => poolKind == 'custom' && status == 'draft';
+}
+
+/// What a pool's creator can do with it right now.
+///
+/// A pool can be edited only while nobody has entered it. It can be deleted
+/// until it closes at the gameweek deadline; everyone who entered is then
+/// refunded, and if anyone other than the creator had entered, the creator
+/// pays a fee of [deleteFeePercent] of the pot.
+class PoolManage {
+  const PoolManage({
+    required this.entries,
+    required this.otherEntries,
+    required this.canEdit,
+    required this.canDelete,
+    required this.deleteFeeCents,
+    this.deleteFeePercent = 5,
+  });
+
+  factory PoolManage.fromJson(Map<String, Object?> json) => PoolManage(
+        entries: (json['entries'] as num? ?? 0).toInt(),
+        otherEntries: (json['other_entries'] as num? ?? 0).toInt(),
+        canEdit: json['can_edit'] as bool? ?? false,
+        canDelete: json['can_delete'] as bool? ?? false,
+        deleteFeeCents: (json['delete_fee_cents'] as num? ?? 0).toInt(),
+        deleteFeePercent: (json['delete_fee_percent'] as num? ?? 5).toDouble(),
+      );
+
+  /// Paid entries in the pool, the creator's own included.
+  final int entries;
+
+  /// How many of those entries belong to other managers.
+  final int otherEntries;
+  final bool canEdit;
+  final bool canDelete;
+
+  /// What deleting the pool now would cost the creator. Zero until another
+  /// manager has entered.
+  final int deleteFeeCents;
+  final double deleteFeePercent;
+
+  /// "5" or "2.5" — the fee percentage without a trailing ".0".
+  String get deleteFeePercentLabel =>
+      deleteFeePercent == deleteFeePercent.roundToDouble()
+          ? deleteFeePercent.toStringAsFixed(0)
+          : deleteFeePercent.toString();
 }
 
 class PoolMember {

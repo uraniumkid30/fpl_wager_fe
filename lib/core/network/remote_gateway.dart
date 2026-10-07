@@ -182,8 +182,10 @@ class RemoteGateway implements AppGateway {
             'stake_cents': command.stakeCents,
             'rules': command.rules,
             'draw_method': command.drawMethod.wireValue,
-            'visibility': 'public',
-            'approval_required': command.approvalRequired,
+            // The server makes every pool a user creates private and lets
+            // anyone with the invite code enter; these two say the same.
+            'visibility': 'private',
+            'approval_required': false,
             'max_members': command.maxMembers,
           },
         ),
@@ -198,6 +200,51 @@ class RemoteGateway implements AppGateway {
   Future<Pool> leavePool(String id) async => Pool.fromJson(
         await _client.post('/pools/$id/leave', idempotencyKey: _uuid.v4()),
       );
+
+  @override
+  Future<Pool> poolByInvite(String code) async => Pool.fromJson(
+        await _client.get('/pools/invite/${Uri.encodeComponent(code)}'),
+      );
+
+  @override
+  Future<Pool> joinPoolByInvite(String code) async => Pool.fromJson(
+        await _client.post(
+          '/pools/invite/${Uri.encodeComponent(code)}/join',
+          idempotencyKey: _uuid.v4(),
+        ),
+      );
+
+  @override
+  Future<Pool> updatePool(
+    String id, {
+    required String name,
+    required int stakeCents,
+    required String rules,
+    required PoolDrawMethod drawMethod,
+    int? maxMembers,
+  }) async =>
+      Pool.fromJson(
+        await _client.patch(
+          '/pools/$id',
+          data: {
+            'name': name,
+            'stake_cents': stakeCents,
+            'rules': rules,
+            'draw_method': drawMethod.wireValue,
+            // Zero tells the server to remove the entry limit.
+            'max_members': maxMembers ?? 0,
+          },
+        ),
+      );
+
+  @override
+  Future<void> deletePool(String id, {required int feeCents}) async {
+    await _client.delete('/pools/$id?fee_cents=$feeCents');
+  }
+
+  @override
+  Future<Pool> resetPoolInvite(String id) async =>
+      Pool.fromJson(await _client.post('/pools/$id/invite/reset'));
 
   @override
   Future<List<AppNotification>> notifications() async {

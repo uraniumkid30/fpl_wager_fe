@@ -4,6 +4,7 @@ import 'package:fpl_wager/app/theme/app_theme.dart';
 import 'package:fpl_wager/core/ui/app_header.dart';
 import 'package:fpl_wager/core/ui/app_notice.dart';
 import 'package:fpl_wager/core/ui/app_widgets.dart';
+import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
 import 'package:fpl_wager/features/pools/domain/pool.dart';
 import 'package:fpl_wager/features/pools/presentation/pool_card.dart';
@@ -18,6 +19,7 @@ class PoolsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pools = ref.watch(poolsProvider);
     final action = ref.watch(poolActionProvider);
+    final currentGameweek = ref.watch(dashboardProvider).value?.currentGameweek;
     return Scaffold(
       appBar: const AppHeader(title: 'Gameweek pools'),
       body: RefreshIndicator(
@@ -31,6 +33,12 @@ class PoolsScreen extends ConsumerWidget {
           data: (items) {
             final autoPools = items.where((item) => item.isAuto).toList();
             final customPools = items.where((item) => !item.isAuto).toList();
+            // A manager may run one pool of their own per gameweek.
+            final myPool = currentGameweek == null
+                ? null
+                : customPools
+                    .where((p) => p.isMine && p.gameweek == currentGameweek)
+                    .firstOrNull;
             return ListView(
               physics: const AlwaysScrollableScrollPhysics(),
               padding: const EdgeInsets.fromLTRB(
@@ -41,7 +49,7 @@ class PoolsScreen extends ConsumerWidget {
               ),
               children: [
                 Text(
-                  'Choose a standard auto pool or create something custom.',
+                  'Enter an auto pool, or run a private one for your own circle.',
                   style: TextStyle(
                     color: Theme.of(context).colorScheme.onSurfaceVariant,
                   ),
@@ -49,7 +57,7 @@ class PoolsScreen extends ConsumerWidget {
                 const SizedBox(height: 22),
                 _SectionTitle(
                   title: 'Auto pools',
-                  subtitle: '₦1,000 · ₦2,000 · ₦5,000',
+                  subtitle: _stakesLabel(autoPools),
                   count: autoPools.length,
                 ),
                 const SizedBox(height: 12),
@@ -73,16 +81,25 @@ class PoolsScreen extends ConsumerWidget {
                 _HeadToHeadCard(onTap: () => context.push('/challenges')),
                 const SizedBox(height: 28),
                 _SectionTitle(
-                  title: 'Custom pools',
-                  subtitle: 'Community pools reviewed by FPLwager',
+                  title: 'Private pools',
+                  subtitle: 'Yours, and the ones you were invited to',
                   count: customPools.length,
                 ),
                 const SizedBox(height: 12),
+                OutlinedButton.icon(
+                  onPressed: () => _joinWithCode(context),
+                  icon: const Icon(Icons.vpn_key_outlined),
+                  label: const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 14),
+                    child: Text('Join with a code'),
+                  ),
+                ),
+                const SizedBox(height: 14),
                 if (customPools.isEmpty)
                   const EmptyState(
                     icon: Icons.tune_rounded,
-                    title: 'No custom pools yet',
-                    message: 'Approved custom pools and your pending submissions appear here.',
+                    title: 'No private pools yet',
+                    message: 'Create one and share its link, or join a friend\'s pool with their code.',
                   )
                 else
                   ...customPools.indexed.map(
@@ -99,9 +116,20 @@ class PoolsScreen extends ConsumerWidget {
                     ),
                   ),
                 const SizedBox(height: 8),
-                _CreateCustomPoolCard(
-                  onTap: () => _createPool(context, ref),
-                ),
+                if (myPool == null)
+                  _CreateCustomPoolCard(
+                    onTap: () => _createPool(context, ref),
+                  )
+                else
+                  Text(
+                    'You can run one pool of your own per gameweek. To start '
+                    'another for Gameweek ${myPool.gameweek}, delete '
+                    '${myPool.name} first.',
+                    textAlign: TextAlign.center,
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: Theme.of(context).colorScheme.onSurfaceVariant,
+                        ),
+                  ),
               ],
             );
           },
@@ -111,13 +139,27 @@ class PoolsScreen extends ConsumerWidget {
   }
 
   Future<void> _createPool(BuildContext context, WidgetRef ref) async {
-    final submitted = await openTeamProtectedRoute<bool>(
+    // The form closes with the new pool's id.
+    final createdId = await openTeamProtectedRoute<String>(
       context,
       ref,
       action: TeamProtectedAction.pool,
       route: '/pools/create',
     );
-    if (submitted == true) ref.invalidate(poolsProvider);
+    if (createdId == null) return;
+    ref.invalidate(poolsProvider);
+    // Straight to the new pool, where its invite link is waiting to be
+    // shared.
+    if (context.mounted) context.push('/pools/$createdId');
+  }
+
+  Future<void> _joinWithCode(BuildContext context) async {
+    final code = await showDialog<String>(
+      context: context,
+      builder: (_) => const _JoinWithCodeDialog(),
+    );
+    if (code == null || !context.mounted) return;
+    context.push('/join/$code');
   }
 
   Future<void> _joinPool(
@@ -149,6 +191,98 @@ class PoolsScreen extends ConsumerWidget {
   }
 }
 
+/// "₦1,000 · ₦2,000 · ₦5,000" from the auto pools actually on offer.
+String _stakesLabel(List<Pool> autoPools) {
+  final stakes = autoPools.map((pool) => pool.stakeCents).toSet().toList()
+    ..sort();
+  if (stakes.isEmpty) return 'Open to every manager';
+  return stakes.map(money).join(' · ');
+}
+
+/// Pulls the invite code out of whatever was typed or pasted: the code on
+/// its own, or a whole invite link (or invite message) that contains it.
+/// Returns null when there is no usable code.
+String? inviteCodeFrom(String input) {
+  var text = input.trim();
+  if (text.isEmpty) return null;
+  final link = RegExp(r'join/([A-Za-z0-9-]+)').firstMatch(text);
+  if (link != null) text = link.group(1)!;
+  final code = text.toUpperCase().replaceAll(RegExp(r'[\s-]'), '');
+  return RegExp(r'^[A-Z0-9]{6,16}$').hasMatch(code) ? code : null;
+}
+
+/// Asks for an invite code (or a pasted link) and closes with the code.
+class _JoinWithCodeDialog extends StatefulWidget {
+  const _JoinWithCodeDialog();
+
+  @override
+  State<_JoinWithCodeDialog> createState() => _JoinWithCodeDialogState();
+}
+
+class _JoinWithCodeDialogState extends State<_JoinWithCodeDialog> {
+  final _input = TextEditingController();
+  String? _error;
+
+  @override
+  void dispose() {
+    _input.dispose();
+    super.dispose();
+  }
+
+  void _submit() {
+    final code = inviteCodeFrom(_input.text);
+    if (code == null) {
+      setState(
+        () => _error = 'That does not look like an invite code or link.',
+      );
+      return;
+    }
+    Navigator.of(context).pop(code);
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+        title: const Text('Join a private pool'),
+        content: SizedBox(
+          width: 420,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'Enter the code the pool\'s creator gave you, or paste their '
+                'invite link.',
+              ),
+              const SizedBox(height: 16),
+              TextField(
+                controller: _input,
+                autofocus: true,
+                autocorrect: false,
+                textCapitalization: TextCapitalization.characters,
+                textInputAction: TextInputAction.done,
+                decoration: InputDecoration(
+                  labelText: 'Invite code or link',
+                  errorText: _error,
+                  prefixIcon: const Icon(Icons.vpn_key_outlined),
+                ),
+                onChanged: (_) {
+                  if (_error != null) setState(() => _error = null);
+                },
+                onSubmitted: (_) => _submit(),
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(onPressed: _submit, child: const Text('Find pool')),
+        ],
+      );
+}
+
 class _SectionTitle extends StatelessWidget {
   const _SectionTitle({required this.title, required this.subtitle, required this.count});
 
@@ -169,7 +303,7 @@ class _SectionTitle extends StatelessWidget {
               ],
             ),
           ),
-          StatusPill('$count available'),
+          StatusPill('$count'),
         ],
       );
 }
@@ -227,7 +361,7 @@ class _CreateCustomPoolCard extends StatelessWidget {
         icon: const Icon(Icons.add_circle_outline_rounded),
         label: const Padding(
           padding: EdgeInsets.symmetric(vertical: 16),
-          child: Text('Create a custom pool'),
+          child: Text('Create a private pool'),
         ),
       );
 }

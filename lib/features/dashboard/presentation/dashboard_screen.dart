@@ -157,7 +157,7 @@ class _Metrics extends StatelessWidget {
           final wide = constraints.maxWidth > 540;
           final cards = <Widget>[
             _Metric(icon: Icons.account_balance_wallet_outlined, label: 'Available balance', value: money(value.wallet.availableCents), accent: AppColors.purple),
-            _Metric(icon: Icons.bolt_rounded, label: 'Active wagers', value: '${value.activeWagers}', accent: AppColors.lime),
+            _Metric(icon: Icons.bolt_rounded, label: 'Active entries', value: '${value.activeWagers}', accent: AppColors.lime),
           ];
           return Column(
             children: [

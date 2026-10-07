@@ -12,6 +12,11 @@ final poolProvider = FutureProvider.autoDispose.family<Pool, String>(
   (ref, id) => ref.watch(appGatewayProvider).pool(id),
 );
 
+/// The private pool an invite code belongs to, for the "join by link" page.
+final poolInviteProvider = FutureProvider.autoDispose.family<Pool, String>(
+  (ref, code) => ref.watch(appGatewayProvider).poolByInvite(code),
+);
+
 final poolActionProvider =
     AsyncNotifierProvider<PoolActionController, void>(PoolActionController.new);
 
@@ -25,6 +30,8 @@ class PoolActionController extends AsyncNotifier<void> {
       _run(() => ref.read(appGatewayProvider).joinPool(id));
   Future<Pool?> leave(String id) =>
       _run(() => ref.read(appGatewayProvider).leavePool(id));
+  Future<Pool?> joinByInvite(String code) =>
+      _run(() => ref.read(appGatewayProvider).joinPoolByInvite(code));
 
   Future<Pool?> _run(Future<Pool> Function() action) async {
     state = const AsyncLoading();

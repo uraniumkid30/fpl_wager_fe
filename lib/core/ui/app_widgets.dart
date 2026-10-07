@@ -53,7 +53,7 @@ class BrandMark extends StatelessWidget {
               children: [
                 const TextSpan(text: 'FPL'),
                 TextSpan(
-                  text: 'wager',
+                  text: 'boardman',
                   style: TextStyle(color: Theme.of(context).colorScheme.primary),
                 ),
               ],

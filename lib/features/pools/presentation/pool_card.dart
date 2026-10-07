@@ -38,6 +38,12 @@ class PoolCard extends StatelessWidget {
                     : null,
               ),
               const Spacer(),
+              if (pool.isPrivate) ...[
+                Icon(Icons.lock_outline_rounded, size: 15, color: Theme.of(context).colorScheme.onSurfaceVariant),
+                const SizedBox(width: 4),
+                Text('PRIVATE', style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant, fontWeight: FontWeight.w900)),
+                const SizedBox(width: 10),
+              ],
               if (pool.isAuto) ...[
                 const Icon(Icons.autorenew_rounded, size: 17, color: AppColors.lime),
                 const SizedBox(width: 5),

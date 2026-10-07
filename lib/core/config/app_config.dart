@@ -39,6 +39,13 @@ class AppConfig {
     return '${apiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1/payments/callback';
   }
 
+  /// The link a pool's creator shares so others can join it.
+  ///
+  /// It points at the API, which answers with a small page that opens the
+  /// app at the pool and shows the code for anyone who prefers to type it.
+  static String poolInviteUrl(String code) =>
+      '${apiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1/join/$code';
+
   /// Where the provider sends the customer when they press cancel on the
   /// checkout page (Paystack only).
   ///

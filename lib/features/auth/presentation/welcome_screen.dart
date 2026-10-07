@@ -15,7 +15,7 @@ class WelcomeScreen extends StatelessWidget {
     if (kIsWeb) {
       AppNotice.info(
         context,
-        'Sign in with FPL works in the FPLwager mobile app. Sign in there '
+        'Sign in with FPL works in the FPLboardman mobile app. Sign in there '
         'once and verify your email, then use Sign in with email here.',
       );
       return;

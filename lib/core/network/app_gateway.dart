@@ -51,6 +51,33 @@ abstract interface class AppGateway {
   Future<Pool> createPool(CreatePoolCommand command);
   Future<Pool> joinPool(String id);
   Future<Pool> leavePool(String id);
+
+  /// The private pool an invite code belongs to, for someone who was sent
+  /// the link. Anyone holding the code may see the pool and enter it.
+  Future<Pool> poolByInvite(String code);
+
+  /// Enters the signed-in manager into the pool the code belongs to.
+  Future<Pool> joinPoolByInvite(String code);
+
+  /// Changes the user's own pool. Only allowed while nobody has entered it.
+  Future<Pool> updatePool(
+    String id, {
+    required String name,
+    required int stakeCents,
+    required String rules,
+    required PoolDrawMethod drawMethod,
+    int? maxMembers,
+  });
+
+  /// Deletes the user's own pool, refunding everyone in it. [feeCents] is
+  /// the fee the creator was shown and agreed to; if it has changed since,
+  /// the server refuses with the code `DELETE_FEE_CHANGED` and nothing is
+  /// deleted.
+  Future<void> deletePool(String id, {required int feeCents});
+
+  /// Gives the user's own pool a new invite code, so the old link stops
+  /// working. Returns the pool with the new code.
+  Future<Pool> resetPoolInvite(String id);
   Future<List<AppNotification>> notifications();
   Future<void> markNotificationRead(String id);
   Future<List<Challenge>> challenges();

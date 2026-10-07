@@ -92,7 +92,7 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                           ),
                           const SizedBox(height: 8),
                           const Text(
-                            'Enter the email you verified on your FPLwager '
+                            'Enter the email you verified on your FPLboardman '
                             'account and we will send you a six-digit code. '
                             'No password needed.',
                             style: TextStyle(
@@ -223,7 +223,7 @@ class _EmailSignInScreenState extends ConsumerState<EmailSignInScreen> {
                     ],
                     const SizedBox(height: 18),
                     Text(
-                      'New to FPLwager? Go back and use Sign in with FPL. '
+                      'New to FPLboardman? Go back and use Sign in with FPL. '
                       'That creates your account; verify your email '
                       'afterwards and you can sign in this way next time.',
                       textAlign: TextAlign.center,

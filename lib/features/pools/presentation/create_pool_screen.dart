@@ -10,22 +10,12 @@ import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class CreatePoolDraft {
-  const CreatePoolDraft({
-    this.approvalRequired = false,
-    this.drawMethod = PoolDrawMethod.split,
-  });
+  const CreatePoolDraft({this.drawMethod = PoolDrawMethod.split});
 
-  final bool approvalRequired;
   final PoolDrawMethod drawMethod;
 
-  CreatePoolDraft copyWith({
-    bool? approvalRequired,
-    PoolDrawMethod? drawMethod,
-  }) =>
-      CreatePoolDraft(
-        approvalRequired: approvalRequired ?? this.approvalRequired,
-        drawMethod: drawMethod ?? this.drawMethod,
-      );
+  CreatePoolDraft copyWith({PoolDrawMethod? drawMethod}) =>
+      CreatePoolDraft(drawMethod: drawMethod ?? this.drawMethod);
 }
 
 final createPoolDraftProvider =
@@ -36,9 +26,6 @@ final createPoolDraftProvider =
 class CreatePoolDraftController extends Notifier<CreatePoolDraft> {
   @override
   CreatePoolDraft build() => const CreatePoolDraft();
-
-  void setApprovalRequired(bool value) =>
-      state = state.copyWith(approvalRequired: value);
 
   void setDrawMethod(PoolDrawMethod value) =>
       state = state.copyWith(drawMethod: value);
@@ -95,12 +82,12 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Create a custom pool',
+                            'Create a private pool',
                             style: Theme.of(context).textTheme.titleLarge,
                           ),
                           const SizedBox(height: 2),
                           Text(
-                            'Submit the amount and rules for admin approval.',
+                            'Only people you invite can see or join it.',
                             style: Theme.of(context).textTheme.bodySmall?.copyWith(
                                   color: Theme.of(context).colorScheme.onSurfaceVariant,
                                 ),
@@ -133,7 +120,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                     ),
                     const SizedBox(height: 12),
                     Text(
-                      'Your custom pool, reviewed first.',
+                      'Your pool, your people.',
                       style: Theme.of(context)
                           .textTheme
                           .headlineSmall
@@ -143,7 +130,10 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                     Text(
                       gameweek == null
                           ? 'Loading the official FPL gameweek…'
-                          : 'Gameweek $gameweek closes automatically at the official FPL deadline.',
+                          : 'You get a link and a code to share once it is '
+                              'created. One pool per gameweek; this one is '
+                              'for Gameweek $gameweek and closes at the FPL '
+                              'deadline.',
                       style: TextStyle(
                         color: Theme.of(context).colorScheme.onSurfaceVariant,
                       ),
@@ -274,18 +264,6 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                   return parsed == null || parsed < 2 ? 'Use 2 or more' : null;
                 },
               ),
-              const SizedBox(height: 10),
-              SwitchListTile(
-                contentPadding: EdgeInsets.zero,
-                title: const Text('Approve managers before entry'),
-                subtitle: const Text(
-                  'Requests remain pending until you accept them.',
-                ),
-                value: draft.approvalRequired,
-                onChanged: ref
-                    .read(createPoolDraftProvider.notifier)
-                    .setApprovalRequired,
-              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: action.isLoading || gameweek == null
@@ -299,12 +277,12 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                     : Text(
                         gameweek == null
                             ? 'Syncing gameweek…'
-                            : 'Submit for approval',
+                            : 'Create pool',
                       ),
               ),
               const SizedBox(height: 10),
               Text(
-                'No funds are locked while the pool is awaiting approval. We will notify you in the app and by email when it is approved.',
+                'FPLboardman reviews new pools before anyone can join; we will tell you in the app and by email when yours is approved. Creating a pool costs nothing, and you can edit or delete it until someone joins.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -343,7 +321,6 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
             stakeCents: amountNaira * 100,
             rules: _rules.text.trim(),
             drawMethod: draft.drawMethod,
-            approvalRequired: draft.approvalRequired,
             maxMembers: int.tryParse(_maxMembers.text),
           ),
         );
@@ -356,7 +333,11 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
       return;
     }
 
-    AppNotice.success(context, '${pool.name} was submitted for admin approval.');
-    context.pop(true);
+    AppNotice.success(
+      context,
+      '${pool.name} was created. Share its invite link with the managers you want in.',
+    );
+    // Closes with the new pool's id, so the pools page can open it.
+    context.pop(pool.id);
   }
 }
