@@ -37,7 +37,6 @@ class PoolDetailScreen extends ConsumerWidget {
           item: item,
           busy: action.isLoading,
           onJoin: () => _join(context, ref, item),
-          onLeave: () => _leave(context, ref, item),
           onChanged: () => ref.invalidate(poolProvider(poolId)),
         ),
       ),
@@ -59,26 +58,6 @@ class PoolDetailScreen extends ConsumerWidget {
     }
     ref.invalidate(poolProvider(poolId));
     AppNotice.success(context, 'You joined ${joined.name}.');
-  }
-
-  Future<void> _leave(BuildContext context, WidgetRef ref, Pool item) async {
-    final left = await ref.read(poolActionProvider.notifier).leave(poolId);
-    if (!context.mounted) return;
-    if (left == null) {
-      _showActionError(context, ref, 'You could not leave the pool.');
-      return;
-    }
-    // A private pool is only visible to its creator and the managers in it,
-    // so someone who leaves one can no longer open this page.
-    if (item.isPrivate && !item.isCreator) {
-      AppNotice.success(
-        context,
-        'You left ${item.name}. Your stake is back in your wallet.',
-      );
-      _closePage(context);
-      return;
-    }
-    ref.invalidate(poolProvider(poolId));
   }
 }
 
@@ -120,7 +99,6 @@ class JoinPoolScreen extends ConsumerWidget {
             busy: action.isLoading,
             invited: true,
             onJoin: () => _join(context, ref, item),
-            onLeave: () => _leave(context, ref, item),
             onChanged: () => ref.invalidate(poolInviteProvider(code)),
           ),
         ),
@@ -145,20 +123,9 @@ class JoinPoolScreen extends ConsumerWidget {
     ref.invalidate(poolInviteProvider(code));
     AppNotice.success(context, 'You joined ${joined.name}. Good luck!');
   }
-
-  Future<void> _leave(BuildContext context, WidgetRef ref, Pool item) async {
-    final left = await ref.read(poolActionProvider.notifier).leave(item.id);
-    if (!context.mounted) return;
-    if (left == null) {
-      _showActionError(context, ref, 'You could not leave the pool.');
-      return;
-    }
-    ref.invalidate(poolInviteProvider(code));
-    AppNotice.success(context, 'You left ${item.name}. Your stake is back in your wallet.');
-  }
 }
 
-/// Shows why a join or leave failed. A balance that is too low opens the
+/// Shows why joining failed. A balance that is too low opens the
 /// top-up page instead of an error.
 void _showActionError(BuildContext context, WidgetRef ref, String fallback) {
   final error = ref.read(poolActionProvider).error;
@@ -248,7 +215,6 @@ class _Body extends StatelessWidget {
     required this.item,
     required this.busy,
     required this.onJoin,
-    required this.onLeave,
     required this.onChanged,
     this.invited = false,
   });
@@ -256,7 +222,6 @@ class _Body extends StatelessWidget {
   final Pool item;
   final bool busy;
   final VoidCallback onJoin;
-  final VoidCallback onLeave;
 
   /// Called after the creator changes the pool, so the page reloads it.
   final VoidCallback onChanged;
@@ -384,9 +349,10 @@ class _Body extends StatelessWidget {
             child: Text('Pending manager approval'),
           )
         else if (item.hasJoined && item.status == 'open')
-          OutlinedButton(
-            onPressed: busy ? null : onLeave,
-            child: const Text('Leave and refund'),
+          // An entry is final: there is no way to leave from here.
+          const FilledButton(
+            onPressed: null,
+            child: Text('You have joined this pool'),
           )
         else if (item.awaitingAdminApproval)
           FilledButton(
