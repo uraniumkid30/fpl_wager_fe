@@ -4,7 +4,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.fpl_wager"
+    namespace = "com.example.fplboardman"
     compileSdk = 37
     ndkVersion = flutter.ndkVersion
 
@@ -14,7 +14,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.fpl_wager"
+        applicationId = "com.example.fplboardman"
 
         minSdk = flutter.minSdkVersion
         targetSdk = flutter.targetSdkVersion

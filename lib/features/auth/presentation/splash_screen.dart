@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
 
 class SplashScreen extends StatelessWidget {
   const SplashScreen({super.key});

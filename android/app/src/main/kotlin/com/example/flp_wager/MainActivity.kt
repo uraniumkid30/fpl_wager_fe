@@ -1,4 +1,4 @@
-package com.example.fpl_wager
+package com.example.fplboardman
 
 import io.flutter.embedding.android.FlutterActivity
 

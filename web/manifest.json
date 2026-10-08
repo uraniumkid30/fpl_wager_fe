@@ -1,6 +1,6 @@
 {
-    "name": "fpl_wager",
-    "short_name": "fpl_wager",
+    "name": "fplboardman",
+    "short_name": "fplboardman",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

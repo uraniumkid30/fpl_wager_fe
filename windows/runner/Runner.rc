@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.example" "\0"
-            VALUE "FileDescription", "fpl_wager" "\0"
+            VALUE "FileDescription", "fplboardman" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "fpl_wager" "\0"
+            VALUE "InternalName", "fplboardman" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2026 com.example. All rights reserved." "\0"
-            VALUE "OriginalFilename", "fpl_wager.exe" "\0"
-            VALUE "ProductName", "fpl_wager" "\0"
+            VALUE "OriginalFilename", "fplboardman.exe" "\0"
+            VALUE "ProductName", "fplboardman" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END

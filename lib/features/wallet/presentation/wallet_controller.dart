@@ -1,7 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
 
 final walletProvider = FutureProvider.autoDispose<WalletSummary>(
   (ref) => ref.watch(appGatewayProvider).wallet(),

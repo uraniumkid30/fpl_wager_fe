@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/withdrawals/domain/withdrawal_models.dart';
 
 /// The payment provider's list of banks. It is the same for everyone and
 /// changes rarely, so it is fetched once and kept for the session.

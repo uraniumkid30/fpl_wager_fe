@@ -145,7 +145,7 @@ class Pool {
 /// A pool can be edited only while nobody has entered it. It can be deleted
 /// until it closes at the gameweek deadline; everyone who entered is then
 /// refunded, and if anyone other than the creator had entered, the creator
-/// pays a fee of [deleteFeePercent] of the pot.
+/// pays a fee of [deleteFeePercent] of one entry fee.
 class PoolManage {
   const PoolManage({
     required this.entries,
@@ -318,8 +318,8 @@ class CreatePoolCommand {
     required this.name,
     required this.gameweek,
     required this.stakeCents,
-    required this.rules,
     required this.drawMethod,
+    this.rules = '',
     this.approvalRequired = false,
     this.maxMembers,
   });
@@ -327,6 +327,9 @@ class CreatePoolCommand {
   final String name;
   final int gameweek;
   final int stakeCents;
+
+  /// Written rules. Pools created in the app no longer have any; how a pool
+  /// is won follows from the draw method.
   final String rules;
   final PoolDrawMethod drawMethod;
   final bool approvalRequired;
@@ -356,8 +359,39 @@ enum PoolDrawMethod {
         PoolDrawMethod.split =>
           'Combine the tied prize positions and divide the money equally.',
         PoolDrawMethod.captains =>
-          'Use captain gameweek points to break a tie.',
+          'Managers level on points are put in order by their captain\'s '
+              'gameweek points. Still level? They share.',
         PoolDrawMethod.number =>
-          'Use the numeric tie-break stated in the custom pool rules.',
+          'Managers level on points are put in order by the number of goals '
+              'their players scored in the gameweek. Still level? They share.',
       };
+}
+
+/// The terms the server sets for pools that users create.
+class PoolTerms {
+  const PoolTerms({this.deleteFeeBasisPoints = 500});
+
+  factory PoolTerms.fromJson(Map<String, Object?> json) {
+    final basisPoints = json['delete_fee_basis_points'] as num?;
+    final percent = json['delete_fee_percent'] as num?;
+    return PoolTerms(
+      deleteFeeBasisPoints: basisPoints?.toInt() ??
+          (percent == null ? 500 : (percent * 100).round()),
+    );
+  }
+
+  /// The fee for deleting a pool after another manager has joined, as a
+  /// share of one entry fee: 500 is 5%.
+  final int deleteFeeBasisPoints;
+
+  /// "5" or "2.5".
+  String get deleteFeePercentLabel {
+    final percent = deleteFeeBasisPoints / 100;
+    return percent == percent.roundToDouble()
+        ? percent.toStringAsFixed(0)
+        : percent.toString();
+  }
+
+  /// The fee for a pool with this entry fee, worked out as the server does.
+  int deleteFeeFor(int stakeCents) => stakeCents * deleteFeeBasisPoints ~/ 10000;
 }

@@ -1,11 +1,9 @@
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/core/ui/wallet_icon.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
-import 'package:fpl_wager/features/notifications/presentation/notifications_controller.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/core/ui/wallet_icon.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/features/notifications/presentation/notifications_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class AppHeader extends ConsumerWidget implements PreferredSizeWidget {

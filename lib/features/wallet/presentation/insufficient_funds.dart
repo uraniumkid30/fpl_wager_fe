@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:fpl_wager/core/errors/app_exception.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
+import 'package:fplboardman/core/errors/app_exception.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
 import 'package:go_router/go_router.dart';
 
 /// True when the server refused an action because the wallet balance does

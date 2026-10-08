@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:go_router/go_router.dart';
 
 /// "Verify email", opened from the dashboard and from Profile.

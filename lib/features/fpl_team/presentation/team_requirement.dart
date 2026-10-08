@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:go_router/go_router.dart';
 
 enum TeamProtectedAction {

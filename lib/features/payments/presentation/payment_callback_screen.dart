@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/payments/presentation/payment_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/payments/presentation/payment_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class PaymentCallbackScreen extends ConsumerStatefulWidget {

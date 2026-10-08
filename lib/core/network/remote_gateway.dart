@@ -1,17 +1,17 @@
-import 'package:fpl_wager/core/errors/app_exception.dart';
-import 'package:fpl_wager/core/network/api_client.dart';
-import 'package:fpl_wager/core/network/app_gateway.dart';
-import 'package:fpl_wager/core/storage/session_store.dart';
-import 'package:fpl_wager/features/auth/domain/auth_models.dart';
-import 'package:fpl_wager/features/challenges/domain/challenge.dart';
-import 'package:fpl_wager/features/dashboard/domain/dashboard.dart';
-import 'package:fpl_wager/features/fpl_team/domain/fpl_team.dart';
-import 'package:fpl_wager/features/pools/domain/pool.dart';
-import 'package:fpl_wager/features/settings/domain/app_settings.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
-import 'package:fpl_wager/features/payments/domain/payment.dart';
-import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
-import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
+import 'package:fplboardman/core/errors/app_exception.dart';
+import 'package:fplboardman/core/network/api_client.dart';
+import 'package:fplboardman/core/network/app_gateway.dart';
+import 'package:fplboardman/core/storage/session_store.dart';
+import 'package:fplboardman/features/auth/domain/auth_models.dart';
+import 'package:fplboardman/features/challenges/domain/challenge.dart';
+import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
+import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/settings/domain/app_settings.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/features/payments/domain/payment.dart';
+import 'package:fplboardman/features/notifications/domain/app_notification.dart';
+import 'package:fplboardman/features/withdrawals/domain/withdrawal_models.dart';
 import 'package:uuid/uuid.dart';
 
 class RemoteGateway implements AppGateway {
@@ -54,7 +54,7 @@ class RemoteGateway implements AppGateway {
           allowRefresh: false,
           data: {
             'refresh_token': refreshToken,
-            if (session != null) 'session': session,
+            'session': ?session,
           },
         ),
       );
@@ -167,7 +167,7 @@ class RemoteGateway implements AppGateway {
   @override
   Future<List<Pool>> pools({int? gameweek}) async {
     final body = await _client.get('/pools', query: {
-      if (gameweek != null) 'gameweek': gameweek,
+      'gameweek': ?gameweek,
     });
     return _list(body, 'items').map((item) => Pool.fromJson(item)).toList();
   }
@@ -184,7 +184,7 @@ class RemoteGateway implements AppGateway {
             'name': command.name,
             'gameweek': command.gameweek,
             'stake_cents': command.stakeCents,
-            'rules': command.rules,
+            if (command.rules.isNotEmpty) 'rules': command.rules,
             'draw_method': command.drawMethod.wireValue,
             // The server makes every pool a user creates private and lets
             // anyone with the invite code enter; these two say the same.
@@ -223,8 +223,8 @@ class RemoteGateway implements AppGateway {
     String id, {
     required String name,
     required int stakeCents,
-    required String rules,
     required PoolDrawMethod drawMethod,
+    String? rules,
     int? maxMembers,
   }) async =>
       Pool.fromJson(
@@ -233,7 +233,7 @@ class RemoteGateway implements AppGateway {
           data: {
             'name': name,
             'stake_cents': stakeCents,
-            'rules': rules,
+            'rules': ?rules,
             'draw_method': drawMethod.wireValue,
             // Zero tells the server to remove the entry limit.
             'max_members': maxMembers ?? 0,
@@ -285,6 +285,17 @@ class RemoteGateway implements AppGateway {
 
   @override
   Future<WalletSummary> wallet() async => WalletSummary.fromJson(await _client.get('/wallet'));
+
+  @override
+  Future<PoolTerms> poolTerms() async {
+    try {
+      return PoolTerms.fromJson(await _client.get('/pools/terms'));
+    } on ValidationException catch (error) {
+      // A server from before the fee could be changed: it charges 5%.
+      if (error.code != null) rethrow;
+      return const PoolTerms();
+    }
+  }
 
   @override
   Future<WalletBalance> walletBalance() async {

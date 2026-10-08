@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
-import 'package:fpl_wager/features/settings/domain/app_settings.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
+import 'package:fplboardman/features/settings/domain/app_settings.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 final settingsControllerProvider =

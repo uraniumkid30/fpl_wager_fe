@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/config/app_config.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/core/ui/app_header.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/config/app_config.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/core/ui/app_header.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 import 'package:intl/intl.dart';
 import 'package:go_router/go_router.dart';
 

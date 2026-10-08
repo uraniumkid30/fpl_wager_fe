@@ -1,14 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/ui/app_header.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/challenges/domain/challenge.dart';
-import 'package:fpl_wager/features/challenges/presentation/challenges_controller.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
-import 'package:fpl_wager/features/wallet/presentation/insufficient_funds.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/ui/app_header.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/challenges/domain/challenge.dart';
+import 'package:fplboardman/features/challenges/presentation/challenges_controller.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart';
+import 'package:fplboardman/features/wallet/presentation/insufficient_funds.dart';
 
 final challengeStakeProvider =
     NotifierProvider<ChallengeStakeController, int>(

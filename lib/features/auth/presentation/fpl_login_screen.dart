@@ -5,10 +5,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/errors/app_exception.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/errors/app_exception.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
 
 /// "Sign in with FPL" — the sole account entry point.
 ///

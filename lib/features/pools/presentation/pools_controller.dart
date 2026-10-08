@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/pools/domain/pool.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 
 final poolsProvider = FutureProvider.autoDispose<List<Pool>>(
   (ref) => ref.watch(appGatewayProvider).pools(),
@@ -15,6 +15,11 @@ final poolProvider = FutureProvider.autoDispose.family<Pool, String>(
 /// The private pool an invite code belongs to, for the "join by link" page.
 final poolInviteProvider = FutureProvider.autoDispose.family<Pool, String>(
   (ref, code) => ref.watch(appGatewayProvider).poolByInvite(code),
+);
+
+/// The fee terms for pools users create, shown before creating one.
+final poolTermsProvider = FutureProvider.autoDispose<PoolTerms>(
+  (ref) => ref.watch(appGatewayProvider).poolTerms(),
 );
 
 final poolActionProvider =

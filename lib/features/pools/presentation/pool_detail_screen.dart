@@ -3,20 +3,20 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/config/app_config.dart';
-import 'package:fpl_wager/core/errors/app_exception.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/core/realtime/realtime_sync.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
-import 'package:fpl_wager/features/pools/domain/pool.dart';
-import 'package:fpl_wager/features/pools/presentation/pool_leaderboard.dart';
-import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
-import 'package:fpl_wager/features/wallet/presentation/insufficient_funds.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/config/app_config.dart';
+import 'package:fplboardman/core/errors/app_exception.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/core/realtime/realtime_sync.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart';
+import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/pools/presentation/pool_leaderboard.dart';
+import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
+import 'package:fplboardman/features/wallet/presentation/insufficient_funds.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 import 'package:go_router/go_router.dart';
 
 /// A pool opened from the app's own lists, by its id.
@@ -88,7 +88,9 @@ class JoinPoolScreen extends ConsumerWidget {
     return PopScope(
       canPop: !standalone,
       onPopInvokedWithResult: (didPop, _) {
-        if (!didPop) context.go('/pools');
+        if (!didPop) {
+          context.go('/pools');
+        }
       },
       child: Scaffold(
         appBar: AppBar(
@@ -465,7 +467,9 @@ class _LiveRefreshState extends ConsumerState<_LiveRefresh> {
     }
     _ticks++;
     final connected = ref.read(realtimeSyncProvider)?.isConnected ?? false;
-    if (!connected || _ticks % 3 == 0) widget.onRefresh();
+    if (!connected || _ticks % 3 == 0) {
+      widget.onRefresh();
+    }
   }
 
   @override
@@ -753,7 +757,7 @@ class _OwnerPanelState extends ConsumerState<_OwnerPanel> {
                             'joined. The pool can no longer be edited. Deleting '
                             'it refunds everyone and costs you '
                             '${money(manage.deleteFeeCents)} '
-                            '(${manage.deleteFeePercentLabel}% of the pot).',
+                            '(${manage.deleteFeePercentLabel}% of the entry fee).',
                 style: Theme.of(context).textTheme.bodySmall?.copyWith(
                       color: muted,
                       height: 1.35,
@@ -847,9 +851,13 @@ class _OwnerPanelState extends ConsumerState<_OwnerPanel> {
       widget.onChanged();
       AppNotice.success(context, 'New invite ready. The old one no longer works.');
     } on Object catch (error) {
-      if (mounted) AppNotice.error(context, error);
+      if (mounted) {
+        AppNotice.error(context, error);
+      }
     } finally {
-      if (mounted) setState(() => _busy = false);
+      if (mounted) {
+        setState(() => _busy = false);
+      }
     }
   }
 
@@ -891,7 +899,9 @@ class _OwnerPanelState extends ConsumerState<_OwnerPanel> {
         ),
       );
       if (confirmed != true || !mounted) {
-        if (changed && mounted) widget.onChanged();
+        if (changed && mounted) {
+          widget.onChanged();
+        }
         return;
       }
 
@@ -905,7 +915,9 @@ class _OwnerPanelState extends ConsumerState<_OwnerPanel> {
           try {
             pool = await gateway.pool(pool.id);
           } on Object catch (reloadError) {
-            if (mounted) AppNotice.error(context, reloadError);
+            if (mounted) {
+              AppNotice.error(context, reloadError);
+            }
             return;
           }
           if (!mounted) return;
@@ -960,7 +972,6 @@ class _DeletePoolDialog extends StatelessWidget {
     final scheme = Theme.of(context).colorScheme;
     final others = manage.otherEntries;
     final fee = manage.deleteFeeCents;
-    final pot = manage.entries * pool.stakeCents;
 
     final List<String> points;
     if (manage.entries == 0) {
@@ -978,8 +989,9 @@ class _DeletePoolDialog extends StatelessWidget {
       points = [
         'All ${manage.entries} entries are refunded in full '
             '(${money(pool.stakeCents)} each), yours included if you joined.',
-        'A ${manage.deleteFeePercentLabel}% fee on the ${money(pot)} pot — '
-            '${money(fee)} — is taken from your wallet.',
+        'A fee of ${manage.deleteFeePercentLabel}% of the '
+            '${money(pool.stakeCents)} entry fee — ${money(fee)} — is taken '
+            'from your wallet.',
         '$others ${others == 1 ? 'manager is' : 'managers are'} told the '
             'pool was cancelled.',
       ];
@@ -1091,7 +1103,6 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
   late final _stakeNaira = TextEditingController(
     text: (widget.pool.stakeCents ~/ 100).toString(),
   );
-  late final _rules = TextEditingController(text: widget.pool.rules);
   late final _maxMembers = TextEditingController(
     text: widget.pool.maxMembers?.toString() ?? '',
   );
@@ -1102,7 +1113,6 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
   void dispose() {
     _name.dispose();
     _stakeNaira.dispose();
-    _rules.dispose();
     _maxMembers.dispose();
     super.dispose();
   }
@@ -1151,20 +1161,6 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
                       if (amount < 1000) return 'The minimum amount is ₦1,000';
                       return null;
                     },
-                  ),
-                  const SizedBox(height: 16),
-                  TextFormField(
-                    controller: _rules,
-                    minLines: 3,
-                    maxLines: 6,
-                    textCapitalization: TextCapitalization.sentences,
-                    decoration: const InputDecoration(
-                      labelText: 'Pool rules',
-                      alignLabelWithHint: true,
-                    ),
-                    validator: (value) => (value?.trim().length ?? 0) < 10
-                        ? 'Describe the pool rules in at least 10 characters'
-                        : null,
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -1246,7 +1242,6 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
             name: _name.text.trim(),
             stakeCents:
                 int.parse(_stakeNaira.text.replaceAll(',', '').trim()) * 100,
-            rules: _rules.text.trim(),
             drawMethod: _drawMethod,
             maxMembers: int.tryParse(_maxMembers.text.trim()),
           );

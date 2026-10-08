@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/settings/domain/app_settings.dart';
-import 'package:fpl_wager/features/settings/presentation/settings_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/settings/domain/app_settings.dart';
+import 'package:fplboardman/features/settings/presentation/settings_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class SettingsScreen extends ConsumerWidget {

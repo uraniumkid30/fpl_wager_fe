@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
-import 'package:fpl_wager/features/notifications/presentation/notifications_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/notifications/domain/app_notification.dart';
+import 'package:fplboardman/features/notifications/presentation/notifications_controller.dart';
 import 'package:go_router/go_router.dart';
 import 'package:intl/intl.dart';
 
@@ -44,8 +44,15 @@ class _NotificationCard extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) => GradientPanel(
         onTap: () async {
-          if (item.isUnread) await ref.read(notificationActionProvider.notifier).markRead(item.id);
-          if (context.mounted && item.route != null) context.push(item.route!);
+          if (item.isUnread) {
+            // Being marked read is a nicety; failing to must not stop the
+            // notification from opening.
+            try {
+              await ref.read(notificationActionProvider.notifier).markRead(item.id);
+            } catch (_) {}
+          }
+          final route = item.route;
+          if (context.mounted && route != null) openNotificationRoute(context, route);
         },
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -70,4 +77,27 @@ class _NotificationCard extends ConsumerWidget {
           ],
         ),
       );
+}
+
+/// Opens the page a notification points to.
+///
+/// Home, Pools and Profile (and the pages inside Profile, such as History)
+/// live in the bottom tabs. Those are switched to rather than stacked on top
+/// of this page: stacking a second copy of the tabs is what crashed the app
+/// with "keyReservation.contains(key)". Every other page (a pool, Withdraw
+/// and so on) opens on top, so Back returns to the notifications.
+void openNotificationRoute(BuildContext context, String route) {
+  final uri = Uri.tryParse(route.trim());
+  if (uri == null || !uri.path.startsWith('/')) return;
+  final path = uri.path;
+  final inTabs = path == '/home' ||
+      path == '/dashboard' ||
+      path == '/pools' ||
+      path == '/profile' ||
+      path.startsWith('/profile/');
+  if (inTabs) {
+    context.go(uri.toString());
+  } else {
+    context.push(uri.toString());
+  }
 }

@@ -38,7 +38,7 @@ class UserProfile {
   /// An FPL account with no address on file yet is given a stand-in one by
   /// the server. It is not somewhere mail can be sent, so it is never shown.
   bool get hasPlaceholderEmail =>
-      email.toLowerCase().endsWith('@fpl.fplwager.internal');
+      email.toLowerCase().endsWith('@fpl.fplboardman.internal');
 
   /// The address to show the user: empty while it is still the stand-in.
   String get displayEmail => hasPlaceholderEmail ? '' : email;

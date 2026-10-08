@@ -1,12 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
-import 'package:fpl_wager/core/ui/app_notice.dart';
-import 'package:fpl_wager/core/ui/app_widgets.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/fpl_team/presentation/team_requirement.dart';
-import 'package:fpl_wager/features/pools/domain/pool.dart';
-import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
+import 'package:fplboardman/core/ui/app_notice.dart';
+import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart';
+import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
 import 'package:go_router/go_router.dart';
 
 class CreatePoolDraft {
@@ -42,14 +42,12 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
   final _form = GlobalKey<FormState>();
   final _name = TextEditingController();
   final _stakeNaira = TextEditingController();
-  final _rules = TextEditingController();
   final _maxMembers = TextEditingController();
 
   @override
   void dispose() {
     _name.dispose();
     _stakeNaira.dispose();
-    _rules.dispose();
     _maxMembers.dispose();
     super.dispose();
   }
@@ -176,21 +174,6 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                 },
               ),
               const SizedBox(height: 20),
-              TextFormField(
-                controller: _rules,
-                minLines: 3,
-                maxLines: 6,
-                textCapitalization: TextCapitalization.sentences,
-                decoration: const InputDecoration(
-                  labelText: 'Pool rules',
-                  hintText: 'Explain who can join, how the winner is decided, and any special conditions.',
-                  alignLabelWithHint: true,
-                ),
-                validator: (value) => (value?.trim().length ?? 0) < 10
-                    ? 'Describe the pool rules in at least 10 characters'
-                    : null,
-              ),
-              const SizedBox(height: 20),
               Text(
                 'How should a draw be settled?',
                 style: Theme.of(context).textTheme.titleMedium,
@@ -264,6 +247,11 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                   return parsed == null || parsed < 2 ? 'Use 2 or more' : null;
                 },
               ),
+              const SizedBox(height: 20),
+              _DeleteFeeNote(
+                stake: _stakeNaira,
+                terms: ref.watch(poolTermsProvider).value ?? const PoolTerms(),
+              ),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: action.isLoading || gameweek == null
@@ -282,7 +270,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'FPLboardman reviews new pools before anyone can join; we will tell you in the app and by email when yours is approved. Creating a pool costs nothing, and you can edit or delete it until someone joins.',
+                'FPLboardman reviews new pools before anyone can join; we will tell you in the app and by email when yours is approved. Creating a pool costs nothing, and you can edit it until someone joins.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -319,7 +307,6 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
             name: _name.text.trim(),
             gameweek: gameweek,
             stakeCents: amountNaira * 100,
-            rules: _rules.text.trim(),
             drawMethod: draft.drawMethod,
             maxMembers: int.tryParse(_maxMembers.text),
           ),
@@ -339,5 +326,78 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
     );
     // Closes with the new pool's id, so the pools page can open it.
     context.pop(pool.id);
+  }
+}
+
+/// Tells the creator, before they create the pool, what deleting it will
+/// cost once other managers have joined. The fee is set by the
+/// administrators; the amount follows the stake as it is typed.
+const _amber = Color(0xFFF5A524);
+
+class _DeleteFeeNote extends StatelessWidget {
+  const _DeleteFeeNote({required this.stake, required this.terms});
+
+  final TextEditingController stake;
+  final PoolTerms terms;
+
+  @override
+  Widget build(BuildContext context) {
+    final scheme = Theme.of(context).colorScheme;
+    return ValueListenableBuilder<TextEditingValue>(
+      valueListenable: stake,
+      builder: (context, value, _) {
+        final naira = int.tryParse(value.text.replaceAll(',', '').trim());
+        final percent = '${terms.deleteFeePercentLabel}%';
+        final example = naira == null || naira < 1000
+            ? ''
+            : ' That is ${money(terms.deleteFeeFor(naira * 100))} on a '
+                '${money(naira * 100)} entry.';
+        final free = terms.deleteFeeBasisPoints <= 0;
+        return Container(
+          padding: const EdgeInsets.all(14),
+          decoration: BoxDecoration(
+            color: _amber.withValues(alpha: 0.12),
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: _amber.withValues(alpha: 0.35)),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.info_outline_rounded, size: 20, color: _amber),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      free
+                          ? 'Deleting your pool'
+                          : 'Deleting after someone joins costs a fee',
+                      style: const TextStyle(fontWeight: FontWeight.w800),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      free
+                          ? 'You can delete this pool until the gameweek '
+                              'deadline. Everyone who joined gets their money '
+                              'back.'
+                          : 'You can delete this pool until the gameweek '
+                              'deadline. If another manager has joined, '
+                              'everyone gets their money back and you pay '
+                              '$percent of the entry fee.$example Deleting '
+                              'before anyone else joins is free.',
+                      style: TextStyle(
+                        color: scheme.onSurfaceVariant,
+                        height: 1.35,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

@@ -1,4 +1,4 @@
-import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
+import 'package:fplboardman/features/withdrawals/domain/withdrawal_models.dart';
 
 class WalletSummary {
   const WalletSummary({

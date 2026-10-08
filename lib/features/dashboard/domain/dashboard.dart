@@ -1,6 +1,6 @@
-import 'package:fpl_wager/features/auth/domain/auth_models.dart';
-import 'package:fpl_wager/features/fpl_team/domain/fpl_team.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/features/auth/domain/auth_models.dart';
+import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
 
 class Dashboard {
   const Dashboard({

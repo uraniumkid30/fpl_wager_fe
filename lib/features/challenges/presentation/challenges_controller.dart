@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/challenges/domain/challenge.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/challenges/domain/challenge.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 
 final challengesProvider = FutureProvider.autoDispose<List<Challenge>>(
   (ref) => ref.watch(appGatewayProvider).challenges(),

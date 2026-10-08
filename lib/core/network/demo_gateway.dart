@@ -1,20 +1,19 @@
-import 'package:fpl_wager/core/network/app_gateway.dart';
-import 'package:fpl_wager/features/auth/domain/auth_models.dart';
-import 'package:fpl_wager/features/challenges/domain/challenge.dart';
-import 'package:fpl_wager/features/dashboard/domain/dashboard.dart';
-import 'package:fpl_wager/features/fpl_team/domain/fpl_team.dart';
-import 'package:fpl_wager/features/pools/domain/pool.dart';
-import 'package:fpl_wager/features/settings/domain/app_settings.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
-import 'package:fpl_wager/features/payments/domain/payment.dart';
-import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
-import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
+import 'package:fplboardman/core/network/app_gateway.dart';
+import 'package:fplboardman/features/auth/domain/auth_models.dart';
+import 'package:fplboardman/features/challenges/domain/challenge.dart';
+import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
+import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/settings/domain/app_settings.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/features/payments/domain/payment.dart';
+import 'package:fplboardman/features/notifications/domain/app_notification.dart';
+import 'package:fplboardman/features/withdrawals/domain/withdrawal_models.dart';
 import 'package:uuid/uuid.dart';
 
 class DemoGateway implements AppGateway {
   final _uuid = const Uuid();
   AuthSession? _session;
-  AppSettings _settings = const AppSettings();
   FplTeam? _team;
   int _balance = 300000;
   final List<LedgerEntry> _ledger = [
@@ -46,7 +45,7 @@ class DemoGateway implements AppGateway {
   @override
   Future<AuthSession?> restoreSession() async { await _wait(); return _session; }
   @override
-  Future<AuthSession> continueWithFpl({required String refreshToken, Map<String, Object?>? session}) async { await _wait(); return _session = _newSession(_user('demo-manager@fplwager.local', 'Demo Manager')); }
+  Future<AuthSession> continueWithFpl({required String refreshToken, Map<String, Object?>? session}) async { await _wait(); return _session = _newSession(_user('demo-manager@fplboardman.local', 'Demo Manager')); }
   @override
   Future<VerificationChallenge> requestEmailSignIn(String email) async { await _wait(); return VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/auth/email/login/verify', expiresInSeconds: 600); }
   @override
@@ -79,7 +78,7 @@ class DemoGateway implements AppGateway {
   @override
   Future<Pool> joinPoolByInvite(String code) async => joinPool(_pools.last.id);
   @override
-  Future<Pool> updatePool(String id, {required String name, required int stakeCents, required String rules, required PoolDrawMethod drawMethod, int? maxMembers}) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; return _pools[index] = Pool(id: old.id, name: name, gameweek: old.gameweek, stakeCents: stakeCents, prizePoolCents: old.prizePoolCents, status: old.status, memberCount: old.memberCount, deadline: old.deadline, rules: rules, drawMethod: drawMethod, maxMembers: maxMembers, membershipStatus: old.membershipStatus); }
+  Future<Pool> updatePool(String id, {required String name, required int stakeCents, required PoolDrawMethod drawMethod, String? rules, int? maxMembers}) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; return _pools[index] = Pool(id: old.id, name: name, gameweek: old.gameweek, stakeCents: stakeCents, prizePoolCents: old.prizePoolCents, status: old.status, memberCount: old.memberCount, deadline: old.deadline, rules: rules ?? old.rules, drawMethod: drawMethod, maxMembers: maxMembers, membershipStatus: old.membershipStatus); }
   @override
   Future<void> deletePool(String id, {required int feeCents}) async { await _wait(); _pools.removeWhere((p) => p.id == id); _balance -= feeCents; }
   @override
@@ -94,6 +93,8 @@ class DemoGateway implements AppGateway {
   Future<Challenge> createChallenge({required int opponentTeamId, required int gameweek, required int stakeCents}) async { await _wait(); final item = Challenge(id: _uuid.v4(), opponentName: 'FPL manager', opponentTeamId: opponentTeamId, gameweek: gameweek, stakeCents: stakeCents, status: 'pending'); _challenges.insert(0, item); _balance -= stakeCents; return item; }
   @override
   Future<WalletSummary> wallet() async { await _wait(); return WalletSummary(availableCents: _balance, lockedCents: 100000, ledger: List.unmodifiable(_ledger)); }
+  @override
+  Future<PoolTerms> poolTerms() async => const PoolTerms();
   @override
   Future<WalletBalance> walletBalance() async { await _wait(); return WalletBalance(availableCents: _balance, lockedCents: 100000); }
   @override
@@ -117,7 +118,7 @@ class DemoGateway implements AppGateway {
   @override
   Future<Withdrawal> requestWithdrawal({required int amountCents, required String idempotencyKey}) async { await _wait(); final item = Withdrawal(id: _uuid.v4(), reference: 'wd_demo', amountCents: amountCents, status: 'pending_approval', createdAt: DateTime.now(), bank: _bankAccount); _withdrawals.insert(0, item); _balance -= amountCents; _ledger.insert(0, LedgerEntry(id: _uuid.v4(), kind: 'withdrawal', description: 'Withdrawal to ${_bankAccount?.summary ?? 'bank'}', amountCents: -amountCents, createdAt: DateTime.now())); return item; }
   @override
-  Future<AppSettings> updateSettings(AppSettings settings) async { await _wait(); return _settings = settings; }
+  Future<AppSettings> updateSettings(AppSettings settings) async { await _wait(); return settings; }
 }
 
 Pool _copyPool(

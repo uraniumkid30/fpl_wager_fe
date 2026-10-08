@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/config/app_config.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/core/realtime/realtime_sync.dart';
-import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/core/config/app_config.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/core/realtime/realtime_sync.dart';
+import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 
 /// Keeps the wallet balance on screen current for as long as someone is
 /// signed in. Watched once, by the app itself.

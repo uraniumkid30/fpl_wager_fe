@@ -1,13 +1,13 @@
-import 'package:fpl_wager/features/auth/domain/auth_models.dart';
-import 'package:fpl_wager/features/challenges/domain/challenge.dart';
-import 'package:fpl_wager/features/dashboard/domain/dashboard.dart';
-import 'package:fpl_wager/features/fpl_team/domain/fpl_team.dart';
-import 'package:fpl_wager/features/pools/domain/pool.dart';
-import 'package:fpl_wager/features/settings/domain/app_settings.dart';
-import 'package:fpl_wager/features/wallet/domain/wallet_models.dart';
-import 'package:fpl_wager/features/payments/domain/payment.dart';
-import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
-import 'package:fpl_wager/features/withdrawals/domain/withdrawal_models.dart';
+import 'package:fplboardman/features/auth/domain/auth_models.dart';
+import 'package:fplboardman/features/challenges/domain/challenge.dart';
+import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
+import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/settings/domain/app_settings.dart';
+import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
+import 'package:fplboardman/features/payments/domain/payment.dart';
+import 'package:fplboardman/features/notifications/domain/app_notification.dart';
+import 'package:fplboardman/features/withdrawals/domain/withdrawal_models.dart';
 
 abstract interface class AppGateway {
   Future<AuthSession?> restoreSession();
@@ -60,14 +60,19 @@ abstract interface class AppGateway {
   Future<Pool> joinPoolByInvite(String code);
 
   /// Changes the user's own pool. Only allowed while nobody has entered it.
+  /// [rules] is left as it is when null.
   Future<Pool> updatePool(
     String id, {
     required String name,
     required int stakeCents,
-    required String rules,
     required PoolDrawMethod drawMethod,
+    String? rules,
     int? maxMembers,
   });
+
+  /// The terms the server sets for pools users create, such as the fee for
+  /// deleting one after other managers have joined.
+  Future<PoolTerms> poolTerms();
 
   /// Deletes the user's own pool, refunding everyone in it. [feeCents] is
   /// the fee the creator was shown and agreed to; if it has changed since,

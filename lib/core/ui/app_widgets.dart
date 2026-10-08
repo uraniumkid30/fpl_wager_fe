@@ -1,9 +1,7 @@
 import 'dart:math' as math;
-import 'dart:ui' show FontFeature;
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/app/theme/app_theme.dart';
+import 'package:fplboardman/app/theme/app_theme.dart';
 import 'package:intl/intl.dart';
 
 final _clockProvider = StreamProvider.autoDispose<DateTime>((ref) async* {

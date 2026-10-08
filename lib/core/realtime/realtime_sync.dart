@@ -3,17 +3,17 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/config/app_config.dart';
-import 'package:fpl_wager/core/network/api_client.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/core/realtime/realtime_socket.dart';
-import 'package:fpl_wager/features/auth/presentation/auth_controller.dart';
-import 'package:fpl_wager/features/challenges/presentation/challenges_controller.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/pools/presentation/pools_controller.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
-import 'package:fpl_wager/features/notifications/presentation/notifications_controller.dart';
-import 'package:fpl_wager/features/withdrawals/presentation/withdrawal_controller.dart';
+import 'package:fplboardman/core/config/app_config.dart';
+import 'package:fplboardman/core/network/api_client.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/core/realtime/realtime_socket.dart';
+import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
+import 'package:fplboardman/features/challenges/presentation/challenges_controller.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/features/notifications/presentation/notifications_controller.dart';
+import 'package:fplboardman/features/withdrawals/presentation/withdrawal_controller.dart';
 
 /// Keeps server-owned read models fresh without putting JWTs in WebSocket URLs.
 /// The HTTP client first obtains a short-lived, single-use connection ticket.
@@ -40,6 +40,11 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
     ref.invalidate(poolsProvider);
     if (resourceId != null && resourceId.isNotEmpty) {
       ref.invalidate(poolProvider(resourceId));
+    } else {
+      // A change to every pool, such as the delete fee: open pool pages and
+      // the create page show it.
+      ref.invalidate(poolProvider);
+      ref.invalidate(poolTermsProvider);
     }
   }
   // A pool's leaderboard moved (its gameweek is being played). Only the

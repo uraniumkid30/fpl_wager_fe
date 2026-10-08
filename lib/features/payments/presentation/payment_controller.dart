@@ -1,9 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/config/app_config.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/dashboard/presentation/dashboard_controller.dart';
-import 'package:fpl_wager/features/payments/domain/payment.dart';
-import 'package:fpl_wager/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/core/config/app_config.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/payments/domain/payment.dart';
+import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 
 class TopUpDraft {
   const TopUpDraft({this.amountCents = 100000, this.provider = 'paystack'});

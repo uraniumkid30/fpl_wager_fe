@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:fpl_wager/core/network/providers.dart';
-import 'package:fpl_wager/features/notifications/domain/app_notification.dart';
+import 'package:fplboardman/core/network/providers.dart';
+import 'package:fplboardman/features/notifications/domain/app_notification.dart';
 
 final notificationsProvider = FutureProvider.autoDispose<List<AppNotification>>(
   (ref) => ref.watch(appGatewayProvider).notifications(),
