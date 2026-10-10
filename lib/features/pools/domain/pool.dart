@@ -1,3 +1,7 @@
+import 'package:fplboardman/features/pools/domain/payout_rules.dart';
+
+export 'package:fplboardman/features/pools/domain/payout_rules.dart';
+
 class Pool {
   const Pool({
     required this.id,
@@ -25,6 +29,7 @@ class Pool {
     this.manage,
     this.ranked = false,
     this.scoredAt,
+    this.payoutRule,
   });
 
   factory Pool.fromJson(Map<String, Object?> json) => Pool(
@@ -62,6 +67,11 @@ class Pool {
         ranked: json['ranked'] as bool? ?? (json['status'] == 'settled'),
         scoredAt: json['scored_at'] is String
             ? DateTime.tryParse(json['scored_at']! as String)
+            : null,
+        payoutRule: json['payout_rule'] is Map<Object?, Object?>
+            ? PayoutRule.fromJson(
+                Map<String, Object?>.from(json['payout_rule']! as Map<Object?, Object?>),
+              )
             : null,
         manage: json['manage'] is Map<Object?, Object?>
             ? PoolManage.fromJson(
@@ -114,6 +124,11 @@ class Pool {
 
   /// When the leaderboard was last worked out from FPL's live data.
   final DateTime? scoredAt;
+
+  /// How a pool a user created pays out (winner takes all, or a split the
+  /// creator chose). Null for auto pools and older pools, which follow the
+  /// standard payout curve.
+  final PayoutRule? payoutRule;
 
   /// True while the pool's gameweek is being played: entries are closed and
   /// the result is not final yet.
@@ -282,9 +297,13 @@ class PayoutPlan {
     required this.winners,
     required this.commonRatio,
     required this.floorMet,
+    this.mode = 'standard',
+    this.chosenWinners = 0,
   });
 
   factory PayoutPlan.fromJson(Map<String, Object?> json) => PayoutPlan(
+        mode: json['mode'] as String? ?? 'standard',
+        chosenWinners: (json['chosen_winners'] as num? ?? 0).toInt(),
         entrants: (json['entrants'] as num? ?? 0).toInt(),
         stakeCents: (json['stake_cents'] as num? ?? 0).toInt(),
         totalStakedCents: (json['total_staked_cents'] as num? ?? 0).toInt(),
@@ -306,6 +325,13 @@ class PayoutPlan {
   final double commonRatio;
   final bool floorMet;
 
+  /// "standard", "winner_takes_all" or "split".
+  final String mode;
+
+  /// The places the creator chose to pay. [winners] is fewer while too few
+  /// managers have joined for all of them.
+  final int chosenWinners;
+
   /// "5" or "2.5" — the platform fee without a trailing ".0".
   String get houseCutPercentLabel =>
       houseCutPercent == houseCutPercent.roundToDouble()
@@ -319,6 +345,7 @@ class CreatePoolCommand {
     required this.gameweek,
     required this.stakeCents,
     required this.drawMethod,
+    this.payout = const PayoutChoice(),
     this.rules = '',
     this.approvalRequired = false,
     this.maxMembers,
@@ -332,6 +359,9 @@ class CreatePoolCommand {
   /// is won follows from the draw method.
   final String rules;
   final PoolDrawMethod drawMethod;
+
+  /// How the prize is paid.
+  final PayoutChoice payout;
   final bool approvalRequired;
   final int? maxMembers;
 }
@@ -352,24 +382,36 @@ enum PoolDrawMethod {
   String get label => switch (this) {
         PoolDrawMethod.split => 'SPLIT',
         PoolDrawMethod.captains => 'CAPTAINS',
-        PoolDrawMethod.number => 'NUMBER',
+        // "Number of goals" in full; short enough here for a phone.
+        PoolDrawMethod.number => 'GOALS',
+      };
+
+  /// The full name, for sentences: "Ties: number of goals".
+  String get longLabel => switch (this) {
+        PoolDrawMethod.split => 'Split',
+        PoolDrawMethod.captains => 'Captains',
+        PoolDrawMethod.number => 'Number of goals',
       };
 
   String get description => switch (this) {
         PoolDrawMethod.split =>
-          'Combine the tied prize positions and divide the money equally.',
+          'Managers level on points share the prize money of the places '
+              'they cover equally.',
         PoolDrawMethod.captains =>
           'Managers level on points are put in order by their captain\'s '
               'gameweek points. Still level? They share.',
         PoolDrawMethod.number =>
-          'Managers level on points are put in order by the number of goals '
+          'Number of goals: managers level on points are put in order by the goals '
               'their players scored in the gameweek. Still level? They share.',
       };
 }
 
 /// The terms the server sets for pools that users create.
 class PoolTerms {
-  const PoolTerms({this.deleteFeeBasisPoints = 500});
+  const PoolTerms({
+    this.deleteFeeBasisPoints = 500,
+    this.winnerRule = const WinnerRule(),
+  });
 
   factory PoolTerms.fromJson(Map<String, Object?> json) {
     final basisPoints = json['delete_fee_basis_points'] as num?;
@@ -377,8 +419,16 @@ class PoolTerms {
     return PoolTerms(
       deleteFeeBasisPoints: basisPoints?.toInt() ??
           (percent == null ? 500 : (percent * 100).round()),
+      winnerRule: json['winner_rule'] is Map<Object?, Object?>
+          ? WinnerRule.fromJson(
+              Map<String, Object?>.from(json['winner_rule']! as Map<Object?, Object?>),
+            )
+          : const WinnerRule(),
     );
   }
+
+  /// How many winners a pool may pay for its number of managers.
+  final WinnerRule winnerRule;
 
   /// The fee for deleting a pool after another manager has joined, as a
   /// share of one entry fee: 500 is 5%.

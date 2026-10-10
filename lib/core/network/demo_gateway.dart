@@ -78,7 +78,7 @@ class DemoGateway implements AppGateway {
   @override
   Future<Pool> joinPoolByInvite(String code) async => joinPool(_pools.last.id);
   @override
-  Future<Pool> updatePool(String id, {required String name, required int stakeCents, required PoolDrawMethod drawMethod, String? rules, int? maxMembers}) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; return _pools[index] = Pool(id: old.id, name: name, gameweek: old.gameweek, stakeCents: stakeCents, prizePoolCents: old.prizePoolCents, status: old.status, memberCount: old.memberCount, deadline: old.deadline, rules: rules ?? old.rules, drawMethod: drawMethod, maxMembers: maxMembers, membershipStatus: old.membershipStatus); }
+  Future<Pool> updatePool(String id, {required String name, required int stakeCents, required PoolDrawMethod drawMethod, String? rules, int? maxMembers, PayoutChoice? payout}) async { await _wait(); final index = _pools.indexWhere((p) => p.id == id); final old = _pools[index]; return _pools[index] = Pool(id: old.id, name: name, gameweek: old.gameweek, stakeCents: stakeCents, prizePoolCents: old.prizePoolCents, status: old.status, memberCount: old.memberCount, deadline: old.deadline, rules: rules ?? old.rules, drawMethod: drawMethod, maxMembers: maxMembers, membershipStatus: old.membershipStatus); }
   @override
   Future<void> deletePool(String id, {required int feeCents}) async { await _wait(); _pools.removeWhere((p) => p.id == id); _balance -= feeCents; }
   @override

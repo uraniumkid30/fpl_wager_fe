@@ -81,18 +81,19 @@ class PoolsScreen extends ConsumerWidget {
                 _HeadToHeadCard(onTap: () => context.push('/challenges')),
                 const SizedBox(height: 28),
                 _SectionTitle(
-                  title: 'Private pools',
-                  subtitle: 'Yours, and the ones you were invited to',
+                  title: 'Custom pools',
+                  subtitle: 'Private pools: yours, and the ones you were invited to',
                   count: customPools.length,
                 ),
                 const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: () => _joinWithCode(context),
-                  icon: const Icon(Icons.vpn_key_outlined),
-                  label: const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 14),
-                    child: Text('Join with a code'),
-                  ),
+                _CustomPoolActions(
+                  onCreate: myPool == null ? () => _createPool(context, ref) : null,
+                  onJoin: () => _joinWithCode(context),
+                  note: myPool == null
+                      ? null
+                      : 'You can run one pool of your own per gameweek. To '
+                          'start another for Gameweek ${myPool.gameweek}, '
+                          'delete ${myPool.name} first.',
                 ),
                 const SizedBox(height: 14),
                 if (customPools.isEmpty)
@@ -114,21 +115,6 @@ class PoolsScreen extends ConsumerWidget {
                         ),
                       ),
                     ),
-                  ),
-                const SizedBox(height: 8),
-                if (myPool == null)
-                  _CreateCustomPoolCard(
-                    onTap: () => _createPool(context, ref),
-                  )
-                else
-                  Text(
-                    'You can run one pool of your own per gameweek. To start '
-                    'another for Gameweek ${myPool.gameweek}, delete '
-                    '${myPool.name} first.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
                   ),
               ],
             );
@@ -351,17 +337,65 @@ class _HeadToHeadCard extends StatelessWidget {
       );
 }
 
-class _CreateCustomPoolCard extends StatelessWidget {
-  const _CreateCustomPoolCard({required this.onTap});
-  final VoidCallback onTap;
+/// The two ways into a custom pool: start one, or join one with its code.
+class _CustomPoolActions extends StatelessWidget {
+  const _CustomPoolActions({
+    required this.onCreate,
+    required this.onJoin,
+    this.note,
+  });
+
+  /// Null when the user already has a pool this gameweek.
+  final VoidCallback? onCreate;
+  final VoidCallback onJoin;
+
+  /// Why creating is not possible right now, if it is not.
+  final String? note;
 
   @override
-  Widget build(BuildContext context) => OutlinedButton.icon(
-        onPressed: onTap,
-        icon: const Icon(Icons.add_circle_outline_rounded),
-        label: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 16),
-          child: Text('Create a private pool'),
-        ),
-      );
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    const padding = EdgeInsets.symmetric(vertical: 14);
+    return GradientPanel(
+      padding: const EdgeInsets.all(14),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: onCreate,
+                  icon: const Icon(Icons.add_circle_outline_rounded),
+                  label: const Padding(
+                    padding: padding,
+                    child: FitText('Create new pool'),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: onJoin,
+                  icon: const Icon(Icons.vpn_key_outlined),
+                  label: const Padding(
+                    padding: padding,
+                    child: FitText('Join pool'),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Text(
+            note ??
+                'Create a pool and share its link, or join a friend\'s pool '
+                    'with the code or link they sent you.',
+            textAlign: TextAlign.center,
+            style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+          ),
+        ],
+      ),
+    );
+  }
 }

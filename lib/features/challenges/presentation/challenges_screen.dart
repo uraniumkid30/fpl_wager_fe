@@ -10,16 +10,12 @@ import 'package:fplboardman/features/dashboard/presentation/dashboard_controller
 import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart';
 import 'package:fplboardman/features/wallet/presentation/insufficient_funds.dart';
 
-final challengeStakeProvider =
-    NotifierProvider<ChallengeStakeController, int>(
-  ChallengeStakeController.new,
-);
+/// The smallest stake the server accepts for a head-to-head: ₦100.
+const _minimumStakeNaira = 100;
 
-class ChallengeStakeController extends Notifier<int> {
-  @override
-  int build() => 100000;
-  void select(int value) => state = value;
-}
+/// Reads a typed naira amount ("2,500" or "2500"); null if it is not one.
+int? _parseNaira(String text) =>
+    int.tryParse(text.replaceAll(',', '').replaceAll('₦', '').trim());
 
 final challengeComposerProvider =
     NotifierProvider<ChallengeComposerController, bool>(
@@ -43,10 +39,12 @@ class ChallengesScreen extends ConsumerStatefulWidget {
 class _ChallengesScreenState extends ConsumerState<ChallengesScreen> {
   final _form = GlobalKey<FormState>();
   final _opponent = TextEditingController();
+  final _amount = TextEditingController();
 
   @override
   void dispose() {
     _opponent.dispose();
+    _amount.dispose();
     super.dispose();
   }
 
@@ -54,7 +52,6 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen> {
   Widget build(BuildContext context) {
     final challenges = ref.watch(challengesProvider);
     final action = ref.watch(challengeActionProvider);
-    final stake = ref.watch(challengeStakeProvider);
     final composerOpen = ref.watch(challengeComposerProvider);
     final gameweek = ref.watch(dashboardProvider).value?.currentGameweek;
 
@@ -110,11 +107,9 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen> {
                       key: const ValueKey('composer'),
                       formKey: _form,
                       opponent: _opponent,
-                      stake: stake,
+                      amount: _amount,
                       gameweek: gameweek,
                       busy: action.isLoading,
-                      onStakeChanged:
-                          ref.read(challengeStakeProvider.notifier).select,
                       onSubmit: _submit,
                       onCancel:
                           ref.read(challengeComposerProvider.notifier).close,
@@ -188,10 +183,11 @@ class _ChallengesScreenState extends ConsumerState<ChallengesScreen> {
     final created = await ref.read(challengeActionProvider.notifier).create(
           opponentTeamId: int.parse(_opponent.text),
           gameweek: gameweek,
-          stakeCents: ref.read(challengeStakeProvider),
+          stakeCents: _parseNaira(_amount.text)! * 100,
         );
     if (created && mounted) {
       _opponent.clear();
+      _amount.clear();
       ref.read(challengeComposerProvider.notifier).close();
       AppNotice.success(context, 'Head-to-head challenge created.');
     } else if (mounted) {
@@ -244,10 +240,9 @@ class _ChallengeComposer extends StatelessWidget {
   const _ChallengeComposer({
     required this.formKey,
     required this.opponent,
-    required this.stake,
+    required this.amount,
     required this.gameweek,
     required this.busy,
-    required this.onStakeChanged,
     required this.onSubmit,
     required this.onCancel,
     super.key,
@@ -255,10 +250,11 @@ class _ChallengeComposer extends StatelessWidget {
 
   final GlobalKey<FormState> formKey;
   final TextEditingController opponent;
-  final int stake;
+
+  /// What each manager stakes, typed in naira.
+  final TextEditingController amount;
   final int? gameweek;
   final bool busy;
-  final ValueChanged<int> onStakeChanged;
   final VoidCallback onSubmit;
   final VoidCallback onCancel;
 
@@ -304,34 +300,49 @@ class _ChallengeComposer extends StatelessWidget {
                     : null,
               ),
               const SizedBox(height: 16),
-              Text('Stake', style: Theme.of(context).textTheme.titleMedium),
-              const SizedBox(height: 8),
-              Wrap(
-                spacing: 8,
-                runSpacing: 8,
-                children: [50000, 100000, 200000, 500000]
-                    .map(
-                      (value) => ChoiceChip(
-                        label: Text(money(value)),
-                        selected: stake == value,
-                        onSelected: (_) => onStakeChanged(value),
-                      ),
-                    )
-                    .toList(),
+              TextFormField(
+                controller: amount,
+                keyboardType: TextInputType.number,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                decoration: const InputDecoration(
+                  labelText: 'Stake (₦)',
+                  hintText: 'How much each of you puts in',
+                  helperText: 'Whole naira, at least ₦100',
+                  prefixIcon: Icon(Icons.payments_outlined),
+                ),
+                validator: (value) {
+                  final naira = _parseNaira(value ?? '');
+                  if (naira == null) return 'Enter a whole amount in naira';
+                  if (naira < _minimumStakeNaira) {
+                    return 'The minimum stake is ₦$_minimumStakeNaira';
+                  }
+                  return null;
+                },
+                onFieldSubmitted: (_) {
+                  if (!busy && gameweek != null) onSubmit();
+                },
               ),
               const SizedBox(height: 18),
-              FilledButton(
-                onPressed: busy || gameweek == null ? null : onSubmit,
-                child: busy
-                    ? const SizedBox.square(
-                        dimension: 22,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : Text(
-                        gameweek == null
-                            ? 'Syncing gameweek…'
-                            : 'Send challenge · ${money(stake)}',
-                      ),
+              // The button shows the amount as it is typed.
+              ValueListenableBuilder<TextEditingValue>(
+                valueListenable: amount,
+                builder: (context, value, _) {
+                  final naira = _parseNaira(value.text);
+                  final label = gameweek == null
+                      ? 'Syncing gameweek…'
+                      : naira == null || naira < _minimumStakeNaira
+                          ? 'Send challenge'
+                          : 'Send challenge · ${money(naira * 100)}';
+                  return FilledButton(
+                    onPressed: busy || gameweek == null ? null : onSubmit,
+                    child: busy
+                        ? const SizedBox.square(
+                            dimension: 22,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : Text(label),
+                  );
+                },
               ),
             ],
           ),

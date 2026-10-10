@@ -3,9 +3,11 @@ import 'package:flutter/foundation.dart';
 class AppConfig {
   const AppConfig._();
 
+  /// The backend. Builds use the live server unless told otherwise, e.g.
+  /// `--dart-define=API_BASE_URL=http://127.0.0.1:8080` for a local one.
   static const apiBaseUrl = String.fromEnvironment(
     'API_BASE_URL',
-    defaultValue: 'http://35.217.63.208',//http://127.0.0.1:8080
+    defaultValue: 'https://api.fplboardman.com',
   );
 
   static const useDemoData = bool.fromEnvironment(

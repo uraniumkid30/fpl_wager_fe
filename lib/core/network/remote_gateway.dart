@@ -186,6 +186,7 @@ class RemoteGateway implements AppGateway {
             'stake_cents': command.stakeCents,
             if (command.rules.isNotEmpty) 'rules': command.rules,
             'draw_method': command.drawMethod.wireValue,
+            ...command.payout.toJson(),
             // The server makes every pool a user creates private and lets
             // anyone with the invite code enter; these two say the same.
             'visibility': 'private',
@@ -226,6 +227,7 @@ class RemoteGateway implements AppGateway {
     required PoolDrawMethod drawMethod,
     String? rules,
     int? maxMembers,
+    PayoutChoice? payout,
   }) async =>
       Pool.fromJson(
         await _client.patch(
@@ -234,6 +236,7 @@ class RemoteGateway implements AppGateway {
             'name': name,
             'stake_cents': stakeCents,
             'rules': ?rules,
+            ...?payout?.toJson(),
             'draw_method': drawMethod.wireValue,
             // Zero tells the server to remove the entry limit.
             'max_members': maxMembers ?? 0,

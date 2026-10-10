@@ -6,6 +6,7 @@ import 'package:fplboardman/core/ui/app_widgets.dart';
 import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/pools/presentation/payout_editor.dart';
 import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
 import 'package:go_router/go_router.dart';
 
@@ -43,6 +44,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
   final _name = TextEditingController();
   final _stakeNaira = TextEditingController();
   final _maxMembers = TextEditingController();
+  PayoutChoice _payout = const PayoutChoice();
 
   @override
   void dispose() {
@@ -60,6 +62,8 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
     final gameweek = dashboard?.currentGameweek;
 
     final size = MediaQuery.sizeOf(context);
+    // The fee and winners limit the server sets; the usual ones until they load.
+    final terms = ref.watch(poolTermsProvider).value ?? const PoolTerms();
 
     return PopScope(
       canPop: !action.isLoading,
@@ -173,9 +177,25 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                   return null;
                 },
               ),
-              const SizedBox(height: 20),
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _maxMembers,
+                keyboardType: TextInputType.number,
+                autovalidateMode: AutovalidateMode.onUserInteraction,
+                decoration: const InputDecoration(
+                  labelText: 'Maximum managers (optional)',
+                  hintText: 'Unlimited',
+                  prefixIcon: Icon(Icons.groups_outlined),
+                ),
+                validator: (value) {
+                  if (value == null || value.isEmpty) return null;
+                  final parsed = int.tryParse(value);
+                  return parsed == null || parsed < 2 ? 'Use 2 or more' : null;
+                },
+              ),
+              const SizedBox(height: 24),
               Text(
-                'How should a draw be settled?',
+                'If managers finish level',
                 style: Theme.of(context).textTheme.titleMedium,
               ),
               const SizedBox(height: 6),
@@ -233,25 +253,16 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
-              TextFormField(
-                controller: _maxMembers,
-                keyboardType: TextInputType.number,
-                decoration: const InputDecoration(
-                  labelText: 'Maximum managers (optional)',
-                  hintText: 'Unlimited',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) return null;
-                  final parsed = int.tryParse(value);
-                  return parsed == null || parsed < 2 ? 'Use 2 or more' : null;
-                },
+              const SizedBox(height: 24),
+              PayoutEditor(
+                initial: _payout,
+                rule: terms.winnerRule,
+                maxMembers: _maxMembers,
+                enabled: !action.isLoading,
+                onChanged: (choice) => _payout = choice,
               ),
               const SizedBox(height: 20),
-              _DeleteFeeNote(
-                stake: _stakeNaira,
-                terms: ref.watch(poolTermsProvider).value ?? const PoolTerms(),
-              ),
+              _DeleteFeeNote(stake: _stakeNaira, terms: terms),
               const SizedBox(height: 24),
               FilledButton(
                 onPressed: action.isLoading || gameweek == null
@@ -294,6 +305,16 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
 
   Future<void> _create(int gameweek, CreatePoolDraft draft) async {
     if (!(_form.currentState?.validate() ?? false)) return;
+    final terms = ref.read(poolTermsProvider).value ?? const PoolTerms();
+    final payoutProblem = PayoutEditor.problem(
+      _payout,
+      terms.winnerRule,
+      int.tryParse(_maxMembers.text.trim()),
+    );
+    if (payoutProblem != null) {
+      AppNotice.error(context, payoutProblem);
+      return;
+    }
     final linked = await requireLinkedFplTeam(
       context,
       ref,
@@ -308,6 +329,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
             gameweek: gameweek,
             stakeCents: amountNaira * 100,
             drawMethod: draft.drawMethod,
+            payout: _payout,
             maxMembers: int.tryParse(_maxMembers.text),
           ),
         );

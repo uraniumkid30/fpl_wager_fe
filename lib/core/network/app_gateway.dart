@@ -68,6 +68,7 @@ abstract interface class AppGateway {
     required PoolDrawMethod drawMethod,
     String? rules,
     int? maxMembers,
+    PayoutChoice? payout,
   });
 
   /// The terms the server sets for pools users create, such as the fee for

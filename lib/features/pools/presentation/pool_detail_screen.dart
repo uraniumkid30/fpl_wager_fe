@@ -13,6 +13,7 @@ import 'package:fplboardman/core/ui/app_widgets.dart';
 import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
 import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
+import 'package:fplboardman/features/pools/presentation/payout_editor.dart';
 import 'package:fplboardman/features/pools/presentation/pool_leaderboard.dart';
 import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
 import 'package:fplboardman/features/wallet/presentation/insufficient_funds.dart';
@@ -501,17 +502,34 @@ String _prizeSentence(Pool item) {
         ? '1 of $entrants managers won ${money(total)}.'
         : '${paid.length} of $entrants managers shared ${money(total)}.';
   }
+  final rule = item.payoutRule;
   if (plan == null || entrants == 0) {
-    return 'One manager in ten wins. Prizes show once someone joins.';
+    if (rule == null) {
+      return 'One manager in ten wins. Prizes show once someone joins.';
+    }
+    return rule.mode == PayoutMode.winnerTakesAll
+        ? 'Winner takes all. Prizes show once someone joins.'
+        : 'Top ${rule.winners} share the prize '
+            '(${rule.shares.map(percentLabel).join(' · ')}). Prizes show '
+            'once someone joins.';
   }
   final fee = '${plan.houseCutPercentLabel}% fee';
   final prize = money(plan.totalWinningCents);
-  final line = plan.winners <= 1
-      ? '1 of $entrants wins $prize after the $fee.'
-      : 'Top ${plan.winners} of $entrants share $prize after the $fee.';
+  var line = plan.mode == 'winner_takes_all'
+      ? 'Winner takes all: $prize after the $fee.'
+      : plan.winners <= 1
+          ? '1 of $entrants wins $prize after the $fee.'
+          : 'Top ${plan.winners} of $entrants share $prize after the $fee.';
+  // A split whose chosen places cannot all be paid yet says when they will.
+  if (rule != null && plan.mode == 'split' && plan.winners < rule.winners) {
+    final needed = rule.limit.managersNeeded(rule.winners);
+    line = '$line All ${rule.winners} places are paid once $needed managers '
+        'have joined.';
+  }
   // A split tie is the default and needs no words; the others do.
   return switch (item.drawMethod) {
     PoolDrawMethod.captains => '$line Ties go to captain points.',
+    PoolDrawMethod.number => '$line Ties go to the number of goals.',
     _ => line,
   };
 }
@@ -1107,6 +1125,28 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
     text: widget.pool.maxMembers?.toString() ?? '',
   );
   late PoolDrawMethod _drawMethod = widget.pool.drawMethod;
+
+  /// How the prize is paid, as the pool has it now. Sent only if changed.
+  late final PayoutChoice _initialPayout = _choiceOf(widget.pool.payoutRule);
+  late PayoutChoice _payout = _initialPayout;
+  bool _payoutChanged = false;
+
+  static PayoutChoice _choiceOf(PayoutRule? rule) => rule == null || rule.mode != PayoutMode.split
+      ? const PayoutChoice()
+      : PayoutChoice(
+          mode: PayoutMode.split,
+          winners: rule.winners,
+          // Keep the pool's own shares only if they differ from the suggestion.
+          shares: _sameShares(rule.shares, defaultShares(rule.winners)) ? null : rule.shares,
+        );
+
+  static bool _sameShares(List<int> a, List<int> b) {
+    if (a.length != b.length) return false;
+    for (var index = 0; index < a.length; index++) {
+      if (a[index] != b[index]) return false;
+    }
+    return true;
+  }
   bool _saving = false;
 
   @override
@@ -1209,6 +1249,17 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
                           : null;
                     },
                   ),
+                  const SizedBox(height: 20),
+                  PayoutEditor(
+                    initial: _initialPayout,
+                    rule: (ref.watch(poolTermsProvider).value ?? const PoolTerms()).winnerRule,
+                    maxMembers: _maxMembers,
+                    enabled: !_saving,
+                    onChanged: (choice) {
+                      _payout = choice;
+                      _payoutChanged = true;
+                    },
+                  ),
                 ],
               ),
             ),
@@ -1235,6 +1286,12 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
 
   Future<void> _save() async {
     if (!(_form.currentState?.validate() ?? false)) return;
+    final rule = (ref.read(poolTermsProvider).value ?? const PoolTerms()).winnerRule;
+    final problem = PayoutEditor.problem(_payout, rule, int.tryParse(_maxMembers.text.trim()));
+    if (problem != null) {
+      AppNotice.error(context, problem);
+      return;
+    }
     setState(() => _saving = true);
     try {
       final updated = await ref.read(appGatewayProvider).updatePool(
@@ -1244,6 +1301,7 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
                 int.parse(_stakeNaira.text.replaceAll(',', '').trim()) * 100,
             drawMethod: _drawMethod,
             maxMembers: int.tryParse(_maxMembers.text.trim()),
+            payout: _payoutChanged || widget.pool.payoutRule == null ? _payout : null,
           );
       if (!mounted) return;
       Navigator.of(context).pop(updated);
