@@ -19,6 +19,7 @@ import 'package:fplboardman/features/notifications/presentation/notifications_sc
 import 'package:fplboardman/features/payments/presentation/payment_callback_screen.dart';
 import 'package:fplboardman/features/payments/presentation/top_up_screen.dart';
 import 'package:fplboardman/features/pools/presentation/create_pool_screen.dart';
+import 'package:fplboardman/features/pools/presentation/gameweek_history_screen.dart';
 import 'package:fplboardman/features/pools/presentation/pool_detail_screen.dart';
 import 'package:fplboardman/features/pools/presentation/pools_screen.dart';
 import 'package:fplboardman/features/profile/presentation/profile_screen.dart';
@@ -186,6 +187,12 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/pools/:poolId',
         builder: (_, state) =>
             PoolDetailScreen(poolId: state.pathParameters['poolId']!),
+      ),
+      // The user's gameweeks: positions, pools played and money won.
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/gameweeks',
+        builder: (_, _) => const GameweekHistoryScreen(),
       ),
       GoRoute(
         parentNavigatorKey: _rootNavigatorKey,

@@ -2,6 +2,18 @@ import 'package:fplboardman/features/pools/domain/payout_rules.dart';
 
 export 'package:fplboardman/features/pools/domain/payout_rules.dart';
 
+/// Which pools a list shows.
+enum PoolView {
+  /// Pools that can still be joined or are being played.
+  active('active'),
+
+  /// Settled pools the user played in.
+  past('past');
+
+  const PoolView(this.wireValue);
+  final String wireValue;
+}
+
 class Pool {
   const Pool({
     required this.id,
@@ -30,6 +42,9 @@ class Pool {
     this.ranked = false,
     this.scoredAt,
     this.payoutRule,
+    this.myPoints,
+    this.myRank,
+    this.myPayoutCents,
   });
 
   factory Pool.fromJson(Map<String, Object?> json) => Pool(
@@ -73,6 +88,9 @@ class Pool {
                 Map<String, Object?>.from(json['payout_rule']! as Map<Object?, Object?>),
               )
             : null,
+        myPoints: (json['my_points'] as num?)?.toInt(),
+        myRank: (json['my_rank'] as num?)?.toInt(),
+        myPayoutCents: (json['my_payout_cents'] as num?)?.toInt(),
         manage: json['manage'] is Map<Object?, Object?>
             ? PoolManage.fromJson(
                 Map<String, Object?>.from(json['manage']! as Map<Object?, Object?>),
@@ -129,6 +147,15 @@ class Pool {
   /// creator chose). Null for auto pools and older pools, which follow the
   /// standard payout curve.
   final PayoutRule? payoutRule;
+
+  /// The user's own final points, position and winnings. Only sent in the
+  /// list of past pools.
+  final int? myPoints;
+  final int? myRank;
+  final int? myPayoutCents;
+
+  /// True once the pool is over: settled and paid, or cancelled.
+  bool get isFinished => status == 'settled' || status == 'cancelled';
 
   /// True while the pool's gameweek is being played: entries are closed and
   /// the result is not final yet.

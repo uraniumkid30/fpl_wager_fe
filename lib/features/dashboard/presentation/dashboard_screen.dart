@@ -78,7 +78,7 @@ class _DashboardBody extends ConsumerWidget {
           ],
         ),
         const SizedBox(height: 8),
-        ...pools.take(3).map((pool) => Padding(
+        ...pools.where((pool) => pool.canJoin).take(3).map((pool) => Padding(
               padding: const EdgeInsets.only(bottom: 12),
               child: _QuickPool(pool: pool),
             )),
@@ -160,6 +160,7 @@ class _Metrics extends StatelessWidget {
             label: 'Active entries',
             value: '${value.activeWagers}',
             accent: AppColors.lime,
+            onTap: () => showMyActivePools(context),
           ),
           const SizedBox(height: 12),
           if (value.deadline == null)
@@ -179,12 +180,142 @@ class _Metrics extends StatelessWidget {
 }
 
 class _Metric extends StatelessWidget {
-  const _Metric({required this.icon, required this.label, required this.value, required this.accent});
+  const _Metric({required this.icon, required this.label, required this.value, required this.accent, this.onTap});
   final IconData icon; final String label; final String value; final Color accent;
+  final VoidCallback? onTap;
   @override
   Widget build(BuildContext context) => GradientPanel(
-        child: Row(children: [Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(15)), child: Icon(icon, color: accent)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 5), Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: accent))]))]),
+        onTap: onTap,
+        child: Row(children: [Container(padding: const EdgeInsets.all(12), decoration: BoxDecoration(color: accent.withValues(alpha: 0.15), borderRadius: BorderRadius.circular(15)), child: Icon(icon, color: accent)), const SizedBox(width: 16), Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Text(label, style: Theme.of(context).textTheme.labelLarge?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)), const SizedBox(height: 5), Text(value, style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900, color: accent))])), if (onTap != null) Icon(Icons.chevron_right_rounded, color: Theme.of(context).colorScheme.onSurfaceVariant)]),
       );
+}
+
+/// Lists the pools the user is in that are still running. Tapping one opens
+/// it.
+Future<void> showMyActivePools(BuildContext context) =>
+    showModalBottomSheet<void>(
+      context: context,
+      useRootNavigator: true,
+      isScrollControlled: true,
+      showDragHandle: true,
+      builder: (_) => const _MyActivePoolsSheet(),
+    );
+
+class _MyActivePoolsSheet extends ConsumerWidget {
+  const _MyActivePoolsSheet();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final pools = ref.watch(poolsProvider);
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.75,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.fromLTRB(AppSpacing.md, 0, AppSpacing.md, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Your active pools', style: Theme.of(context).textTheme.titleLarge),
+            const SizedBox(height: 4),
+            Text(
+              'Pools you are in that have not finished yet.',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+            ),
+            const SizedBox(height: 14),
+            Flexible(
+              child: pools.when(
+                loading: () => const Padding(
+                  padding: EdgeInsets.all(24),
+                  child: Center(child: CircularProgressIndicator()),
+                ),
+                error: (error, _) => Padding(
+                  padding: const EdgeInsets.all(16),
+                  child: Text('Your pools could not be loaded. $error'),
+                ),
+                data: (items) {
+                  final mine = items
+                      .where((pool) => pool.hasJoined || pool.isPending)
+                      .toList()
+                    ..sort((a, b) => a.gameweek.compareTo(b.gameweek));
+                  if (mine.isEmpty) {
+                    return Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const SizedBox(height: 12),
+                        Text(
+                          'You are not in any pool right now.',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                        const SizedBox(height: 12),
+                        FilledButton(
+                          onPressed: () {
+                            Navigator.of(context).pop();
+                            GoRouter.of(context).go('/pools');
+                          },
+                          child: const Text('Browse pools'),
+                        ),
+                      ],
+                    );
+                  }
+                  return ListView.separated(
+                    shrinkWrap: true,
+                    itemCount: mine.length,
+                    separatorBuilder: (_, _) => const SizedBox(height: 8),
+                    itemBuilder: (context, index) {
+                      final pool = mine[index];
+                      final state = pool.isPending
+                          ? 'Awaiting approval'
+                          : pool.isLive
+                              ? 'In play'
+                              : pool.awaitingAdminApproval
+                                  ? 'Awaiting admin approval'
+                                  : 'Open';
+                      return GradientPanel(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                        onTap: () {
+                          final router = GoRouter.of(context);
+                          Navigator.of(context).pop();
+                          router.push('/pools/${pool.id}');
+                        },
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    pool.name,
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.titleSmall?.copyWith(fontWeight: FontWeight.w800),
+                                  ),
+                                  const SizedBox(height: 3),
+                                  Text(
+                                    'GW${pool.gameweek} · $state · ${pool.memberCount} managers · prize ${money(pool.prizePoolCents)}',
+                                    maxLines: 1,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const Icon(Icons.chevron_right_rounded),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 }
 
 class _QuickPool extends StatelessWidget {

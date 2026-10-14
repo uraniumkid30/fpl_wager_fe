@@ -1,11 +1,26 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fplboardman/core/network/providers.dart';
 import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/pools/domain/gameweek_history.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
 import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 
-final poolsProvider = FutureProvider.autoDispose<List<Pool>>(
-  (ref) => ref.watch(appGatewayProvider).pools(),
+/// The pools that can still be joined or are being played, earliest
+/// gameweek first. Settled and cancelled pools are never in it.
+final poolsProvider = FutureProvider.autoDispose<List<Pool>>((ref) async {
+  final items = await ref.watch(appGatewayProvider).pools();
+  return items.where((pool) => !pool.isFinished).toList();
+});
+
+/// The settled pools the user played in, newest first, with their result.
+final pastPoolsProvider = FutureProvider.autoDispose<List<Pool>>(
+  (ref) => ref.watch(appGatewayProvider).pools(view: PoolView.past),
+);
+
+/// The user's gameweeks, newest first.
+final gameweekHistoryProvider =
+    FutureProvider.autoDispose<List<GameweekResult>>(
+  (ref) => ref.watch(appGatewayProvider).gameweekHistory(),
 );
 
 final poolProvider = FutureProvider.autoDispose.family<Pool, String>(
@@ -48,6 +63,7 @@ class PoolActionController extends AsyncNotifier<void> {
     );
     if (!result.hasError) {
       ref.invalidate(poolsProvider);
+      ref.invalidate(gameweekHistoryProvider);
       ref.invalidate(dashboardProvider);
       ref.invalidate(walletProvider);
       return result.requireValue;

@@ -231,6 +231,13 @@ class _ProfileBody extends ConsumerWidget {
               : '$ledgerCount recent ${ledgerCount == 1 ? 'entry' : 'entries'}',
           onTap: () => context.go('/profile/history'),
         ),
+        const SizedBox(height: 10),
+        _LinkTile(
+          icon: Icons.leaderboard_rounded,
+          title: 'Gameweek history',
+          subtitle: 'Your position each gameweek, and the pools you played',
+          onTap: () => context.push('/gameweeks'),
+        ),
 
         // ── Everything else ────────────────────────────────────────────
         const SizedBox(height: 26),

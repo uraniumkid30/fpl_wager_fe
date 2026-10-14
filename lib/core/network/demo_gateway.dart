@@ -3,6 +3,7 @@ import 'package:fplboardman/features/auth/domain/auth_models.dart';
 import 'package:fplboardman/features/challenges/domain/challenge.dart';
 import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
 import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/pools/domain/gameweek_history.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
 import 'package:fplboardman/features/settings/domain/app_settings.dart';
 import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
@@ -64,7 +65,9 @@ class DemoGateway implements AppGateway {
   @override
   Future<FplManager> validateTeam(int entryId) async { await _wait(); return FplManager(entryId: entryId, teamName: 'Gameweek Architects', firstName: 'Dean', lastName: 'Miles', overallPoints: 132, gameweekPoints: 61, overallRank: 128450, currentGameweek: 2); }
   @override
-  Future<List<Pool>> pools({int? gameweek}) async { await _wait(); return _pools.where((p) => gameweek == null || p.gameweek == gameweek).toList(); }
+  Future<List<Pool>> pools({int? gameweek, PoolView view = PoolView.active}) async { await _wait(); return _pools.where((p) => (gameweek == null || p.gameweek == gameweek) && (view == PoolView.past ? p.status == 'settled' && p.hasJoined : !p.isFinished)).toList(); }
+  @override
+  Future<List<GameweekResult>> gameweekHistory() async { await _wait(); return [GameweekResult(gameweek: 1, gameweekStatus: 'finished', points: 74, position: 3, managers: 41, poolsEntered: 1, stakedCents: 100000, wonCents: 185000, isFinal: true, pools: const [GameweekPoolResult(id: 'past-1', name: 'GW1 Auto Pool · ₦1,000', poolKind: 'auto', status: 'settled', stakeCents: 100000, entrants: 41, points: 74, rank: 3, payoutCents: 185000)])]; }
   @override
   Future<Pool> pool(String id) async { await _wait(); final item = _pools.firstWhere((p) => p.id == id); return _copyPool(item, leaderboard: const [PoolMember(displayName: 'Olawale Mosuro', rank: 1, points: 0), PoolMember(displayName: 'Chuks Paul', rank: 2, points: 0), PoolMember(displayName: 'Dean Miles (you)', rank: 3, points: 0)], prizeSplit: [Prize(place: 1, amountCents: item.prizePoolCents, percent: 100)]); }
   @override

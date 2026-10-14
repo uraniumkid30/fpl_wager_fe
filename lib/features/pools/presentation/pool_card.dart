@@ -23,7 +23,9 @@ class PoolCard extends StatelessWidget {
             ? 'Pending approval'
             : pool.hasJoined
                 ? 'Joined'
-                : pool.status;
+                : pool.isLive
+                    ? 'In play'
+                    : pool.status;
     return GradientPanel(
       onTap: () => context.push('/pools/${pool.id}'),
       child: Column(
@@ -103,7 +105,9 @@ class PoolCard extends StatelessWidget {
     if (pool.hasJoined) return 'Joined';
     if (pool.awaitingAdminApproval) return 'Awaiting admin approval';
     if (pool.isPending) return 'Pending approval';
-    if (!pool.canJoin) return 'Pool ${pool.status}';
+    if (!pool.canJoin) {
+      return pool.isLive ? 'Entries closed' : 'Pool ${pool.status}';
+    }
     return 'Join pool · ${money(pool.stakeCents)}';
   }
 

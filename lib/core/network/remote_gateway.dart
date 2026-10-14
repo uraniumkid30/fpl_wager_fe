@@ -6,6 +6,7 @@ import 'package:fplboardman/features/auth/domain/auth_models.dart';
 import 'package:fplboardman/features/challenges/domain/challenge.dart';
 import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
 import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/pools/domain/gameweek_history.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
 import 'package:fplboardman/features/settings/domain/app_settings.dart';
 import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
@@ -165,11 +166,21 @@ class RemoteGateway implements AppGateway {
       );
 
   @override
-  Future<List<Pool>> pools({int? gameweek}) async {
+  Future<List<Pool>> pools({
+    int? gameweek,
+    PoolView view = PoolView.active,
+  }) async {
     final body = await _client.get('/pools', query: {
       'gameweek': ?gameweek,
+      'view': view.wireValue,
     });
     return _list(body, 'items').map((item) => Pool.fromJson(item)).toList();
+  }
+
+  @override
+  Future<List<GameweekResult>> gameweekHistory() async {
+    final body = await _client.get('/me/gameweeks');
+    return _list(body, 'items').map(GameweekResult.fromJson).toList();
   }
 
   @override

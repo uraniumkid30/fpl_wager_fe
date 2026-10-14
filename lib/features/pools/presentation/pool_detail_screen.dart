@@ -385,6 +385,10 @@ class _Body extends StatelessWidget {
           const SizedBox(height: 10),
           GradientPanel(child: Text(item.rules)),
         ],
+        if (item.status == 'settled') ...[
+          const SizedBox(height: 22),
+          _FinalResult(pool: item),
+        ],
         const SizedBox(height: 26),
         PoolLeaderboard(pool: item),
         if (item.status != 'cancelled') ...[
@@ -485,8 +489,8 @@ class _LiveRefreshState extends ConsumerState<_LiveRefresh> {
 
 /// The one line that sums up who wins what.
 ///
-/// Before the pool is settled: "Top 3 of 30 share ₦28,500.00 after the 5%
-/// fee." Afterwards: "3 of 30 managers shared ₦28,500.00."
+/// Before the pool is settled: "Top 3 of 30 share ₦28,500.00." Afterwards:
+/// "3 of 30 managers shared ₦28,500.00."
 String _prizeSentence(Pool item) {
   final plan = item.payout;
   final entrants = plan?.entrants ?? item.memberCount;
@@ -513,13 +517,12 @@ String _prizeSentence(Pool item) {
             '(${rule.shares.map(percentLabel).join(' · ')}). Prizes show '
             'once someone joins.';
   }
-  final fee = '${plan.houseCutPercentLabel}% fee';
   final prize = money(plan.totalWinningCents);
   var line = plan.mode == 'winner_takes_all'
-      ? 'Winner takes all: $prize after the $fee.'
+      ? 'Winner takes all: $prize.'
       : plan.winners <= 1
-          ? '1 of $entrants wins $prize after the $fee.'
-          : 'Top ${plan.winners} of $entrants share $prize after the $fee.';
+          ? '1 of $entrants wins $prize.'
+          : 'Top ${plan.winners} of $entrants share $prize.';
   // A split whose chosen places cannot all be paid yet says when they will.
   if (rule != null && plan.mode == 'split' && plan.winners < rule.winners) {
     final needed = rule.limit.managersNeeded(rule.winners);
@@ -1317,5 +1320,63 @@ class _EditPoolDialogState extends ConsumerState<_EditPoolDialog> {
       }
       setState(() => _saving = false);
     }
+  }
+}
+
+/// The headline of a settled pool: where the user finished and what they
+/// won, or, for someone who was not in it, who won.
+class _FinalResult extends StatelessWidget {
+  const _FinalResult({required this.pool});
+  final Pool pool;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    final me = pool.leaderboard.where((m) => m.isMe).firstOrNull;
+    final winners = pool.leaderboard.where((m) => m.payoutCents > 0).toList();
+    final entrants = pool.leaderboard.where((m) => m.status == 'active').length;
+    final String title;
+    final String detail;
+    final bool won;
+    if (me != null && me.rank > 0) {
+      won = me.payoutCents > 0;
+      title = 'You finished ${_ordinal(me.rank)} of $entrants';
+      detail = won
+          ? 'You won ${money(me.payoutCents)} with ${me.points} points. '
+              'It is in your wallet.'
+          : '${me.points} points. No prize this time.';
+    } else {
+      won = false;
+      title = 'Final result';
+      detail = winners.isEmpty
+          ? 'Nobody was paid in this pool.'
+          : 'Won by ${winners.map((m) => m.displayName).take(3).join(', ')}'
+              '${winners.length > 3 ? ' and ${winners.length - 3} more' : ''}.';
+    }
+    return GradientPanel(
+      child: Row(
+        children: [
+          CircleAvatar(
+            radius: 24,
+            backgroundColor: (won ? AppColors.lime : muted).withValues(alpha: 0.16),
+            child: Icon(
+              won ? Icons.emoji_events_rounded : Icons.flag_rounded,
+              color: won ? AppColors.lime : muted,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(title, style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w800)),
+                const SizedBox(height: 4),
+                Text(detail, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted)),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
   }
 }

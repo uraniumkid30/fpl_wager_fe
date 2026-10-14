@@ -2,6 +2,7 @@ import 'package:fplboardman/features/auth/domain/auth_models.dart';
 import 'package:fplboardman/features/challenges/domain/challenge.dart';
 import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
 import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/pools/domain/gameweek_history.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
 import 'package:fplboardman/features/settings/domain/app_settings.dart';
 import 'package:fplboardman/features/wallet/domain/wallet_models.dart';
@@ -46,7 +47,14 @@ abstract interface class AppGateway {
   Future<Dashboard> dashboard();
   Future<FplTeam> linkTeam(int entryId);
   Future<FplManager> validateTeam(int entryId);
-  Future<List<Pool>> pools({int? gameweek});
+  /// Pools for the Pools page. [view] is [PoolView.active] (what can still
+  /// be joined or is being played, earliest gameweek first) or
+  /// [PoolView.past] (settled pools the user played, with their result).
+  Future<List<Pool>> pools({int? gameweek, PoolView view = PoolView.active});
+
+  /// The user's gameweeks, newest first: their position on the platform,
+  /// the pools they entered and what they won.
+  Future<List<GameweekResult>> gameweekHistory();
   Future<Pool> pool(String id);
   Future<Pool> createPool(CreatePoolCommand command);
   Future<Pool> joinPool(String id);

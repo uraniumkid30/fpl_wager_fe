@@ -38,6 +38,10 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
   }
   if (resources.contains('pools')) {
     ref.invalidate(poolsProvider);
+    // A pool settling moves it from the active list to the past pools and
+    // completes the gameweek in the history.
+    ref.invalidate(pastPoolsProvider);
+    ref.invalidate(gameweekHistoryProvider);
     if (resourceId != null && resourceId.isNotEmpty) {
       ref.invalidate(poolProvider(resourceId));
     } else {
@@ -54,6 +58,8 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
       ref.invalidate(poolProvider(resourceId));
     }
     ref.invalidate(poolInviteProvider);
+    // Live positions show in the gameweek history too.
+    ref.invalidate(gameweekHistoryProvider);
   }
   if (resources.contains('challenges')) ref.invalidate(challengesProvider);
   if (resources.contains('account')) {
@@ -73,6 +79,8 @@ void _catchUp(Ref ref) {
   ref.invalidate(dashboardProvider);
   ref.invalidate(walletProvider);
   ref.invalidate(poolsProvider);
+  ref.invalidate(pastPoolsProvider);
+  ref.invalidate(gameweekHistoryProvider);
   ref.invalidate(poolProvider);
   ref.invalidate(challengesProvider);
   ref.invalidate(notificationsProvider);
