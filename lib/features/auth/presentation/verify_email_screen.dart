@@ -58,8 +58,11 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
             shrinkWrap: true,
             padding: const EdgeInsets.all(AppSpacing.lg),
             children: [
-              ConstrainedBox(
-                constraints: const BoxConstraints(maxWidth: 520),
+              // Center keeps the form at its width on a wide screen;
+              // a list would otherwise stretch it edge to edge.
+              Center(
+                child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 440),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
@@ -170,6 +173,7 @@ class _VerifyEmailScreenState extends ConsumerState<VerifyEmailScreen> {
                     ],
                   ],
                 ),
+              ),
               ),
             ],
           ),

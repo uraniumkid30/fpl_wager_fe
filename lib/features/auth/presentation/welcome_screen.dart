@@ -24,104 +24,174 @@ class WelcomeScreen extends StatelessWidget {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
-        body: DecoratedBox(
-          decoration: BoxDecoration(
-            gradient: LinearGradient(
-              colors: Theme.of(context).brightness == Brightness.dark
-                  ? const [Color(0xFF031C17), Color(0xFF0A2F27), Color(0xFF22123B)]
-                  : const [Color(0xFFF7FBF5), Color(0xFFE7FBE8), Color(0xFFF1E9FF)],
-              begin: Alignment.topCenter,
-              end: Alignment.bottomRight,
-            ),
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final scheme = theme.colorScheme;
+    final dark = theme.brightness == Brightness.dark;
+    final muted = scheme.onSurfaceVariant;
+    return Scaffold(
+      body: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: dark
+                ? const [Color(0xFF031C17), Color(0xFF0A2F27), Color(0xFF22123B)]
+                : const [Color(0xFFF7FBF5), Color(0xFFE7FBE8), Color(0xFFF1E9FF)],
+            begin: Alignment.topCenter,
+            end: Alignment.bottomRight,
           ),
-          child: SafeArea(
-            // The page fills the screen, with the buttons at the bottom, and
-            // scrolls instead of overflowing on a small phone or with large
-            // text.
-            child: LayoutBuilder(
-              builder: (context, constraints) => SingleChildScrollView(
-                padding: const EdgeInsets.all(AppSpacing.lg),
-                child: ConstrainedBox(
-                  constraints: BoxConstraints(
-                    // The space left inside the padding above and below.
-                    minHeight: constraints.maxHeight > 2 * AppSpacing.lg
-                        ? constraints.maxHeight - 2 * AppSpacing.lg
-                        : 0.0,
-                  ),
-                  child: IntrinsicHeight(
-                    child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const Align(alignment: Alignment.centerLeft, child: BrandMark()),
-                  const Spacer(),
-                  const SizedBox(height: 24),
-                  FadeSlideIn(
-                    child: Container(
-                      width: 92,
-                      height: 92,
-                      decoration: BoxDecoration(
-                        color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.13),
-                        shape: BoxShape.circle,
-                      ),
-                      child: Icon(Icons.emoji_events_rounded, size: 48, color: Theme.of(context).colorScheme.primary),
-                    ),
-                  ),
-                  const SizedBox(height: 28),
-                  FadeSlideIn(
-                    delay: const Duration(milliseconds: 90),
-                    child: Text(
-                      'Put your gameweek\nwhere your mouth is.',
-                      style: Theme.of(context).textTheme.displaySmall,
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  FadeSlideIn(
-                    delay: const Duration(milliseconds: 160),
-                    child: Text(
-                      'Join trusted pools, challenge a rival head to head, and follow every result with a transparent wallet.',
-                      style: Theme.of(context).textTheme.bodyLarge?.copyWith(
-                            color: Theme.of(context).colorScheme.onSurfaceVariant,
-                            height: 1.5,
+        ),
+        child: Stack(
+          children: [
+            // Two soft glows in the brand colours behind the card.
+            Positioned(
+              top: -160,
+              left: -120,
+              child: _Glow(
+                color: scheme.primary.withValues(alpha: dark ? 0.20 : 0.14),
+                size: 460,
+              ),
+            ),
+            Positioned(
+              bottom: -180,
+              right: -140,
+              child: _Glow(
+                color: AppColors.purple.withValues(alpha: dark ? 0.18 : 0.10),
+                size: 520,
+              ),
+            ),
+            SafeArea(
+              child: Center(
+                // Scrolls instead of overflowing on a small phone or with
+                // large text; the inner Center stops the card stretching to
+                // the width of a wide screen.
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 32),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Center(child: BrandMark()),
+                          const SizedBox(height: 24),
+                          FadeSlideIn(child: _card(context, theme, dark, muted)),
+                          const SizedBox(height: 18),
+                          Text(
+                            '18+ · Play responsibly',
+                            textAlign: TextAlign.center,
+                            style: theme.textTheme.labelSmall?.copyWith(color: muted),
                           ),
-                    ),
-                  ),
-                  const Spacer(),
-                  const SizedBox(height: 28),
-                  FilledButton.icon(
-                    onPressed: () => _signInWithFpl(context),
-                    icon: const Icon(Icons.sports_soccer_rounded),
-                    label: const Text('Sign in with FPL'),
-                  ),
-                  const SizedBox(height: 10),
-                  OutlinedButton.icon(
-                    onPressed: () => context.go('/email-sign-in'),
-                    icon: const Icon(Icons.mail_outline_rounded),
-                    label: const Text('Sign in with email'),
-                  ),
-                  const SizedBox(height: 10),
-                  Text(
-                    'New here? Use Sign in with FPL: it opens the official '
-                    'Fantasy Premier League login, where your password goes '
-                    'straight to them and never to us. Once you have verified '
-                    'your email you can also sign in with email.',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: Theme.of(context).colorScheme.onSurfaceVariant,
-                        ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    '18+ · Play responsibly',
-                    textAlign: TextAlign.center,
-                    style: Theme.of(context).textTheme.labelSmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
-                  ),
-                ],
+                        ],
+                      ),
                     ),
                   ),
                 ),
               ),
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _card(BuildContext context, ThemeData theme, bool dark, Color muted) =>
+      DecoratedBox(
+        decoration: BoxDecoration(
+          color: theme.colorScheme.surface.withValues(alpha: dark ? 0.86 : 0.94),
+          borderRadius: BorderRadius.circular(24),
+          border: Border.all(
+            color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: dark ? 0.35 : 0.08),
+              blurRadius: 40,
+              offset: const Offset(0, 18),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              Center(
+                child: Container(
+                  width: 72,
+                  height: 72,
+                  decoration: BoxDecoration(
+                    color: theme.colorScheme.primary.withValues(alpha: 0.13),
+                    shape: BoxShape.circle,
+                  ),
+                  child: Icon(
+                    Icons.emoji_events_rounded,
+                    size: 38,
+                    color: theme.colorScheme.primary,
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                'Put your gameweek\nwhere your mouth is.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.headlineSmall?.copyWith(
+                  fontWeight: FontWeight.w800,
+                  letterSpacing: -0.4,
+                ),
+              ),
+              const SizedBox(height: 10),
+              Text(
+                'Join trusted pools, challenge a rival head to head, and '
+                'follow every result with a transparent wallet.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: muted,
+                  height: 1.5,
+                ),
+              ),
+              const SizedBox(height: 26),
+              FilledButton.icon(
+                onPressed: () => _signInWithFpl(context),
+                icon: const Icon(Icons.sports_soccer_rounded),
+                label: const Text('Sign in with FPL'),
+              ),
+              const SizedBox(height: 10),
+              OutlinedButton.icon(
+                onPressed: () => context.go('/email-sign-in'),
+                icon: const Icon(Icons.mail_outline_rounded),
+                label: const Text('Sign in with email'),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'New here? Use Sign in with FPL: it opens the official '
+                'Fantasy Premier League login, where your password goes '
+                'straight to them and never to us. Once you have verified '
+                'your email you can also sign in with email.',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(color: muted),
+              ),
+            ],
+          ),
+        ),
+      );
+}
+
+/// A soft round glow of colour behind the sign-in card.
+class _Glow extends StatelessWidget {
+  const _Glow({required this.color, required this.size});
+
+  final Color color;
+  final double size;
+
+  @override
+  Widget build(BuildContext context) => IgnorePointer(
+        child: Container(
+          width: size,
+          height: size,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
           ),
         ),
       );
