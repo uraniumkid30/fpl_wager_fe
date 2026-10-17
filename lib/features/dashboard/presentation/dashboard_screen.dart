@@ -319,13 +319,65 @@ class _MyActivePoolsSheet extends ConsumerWidget {
 }
 
 class _QuickPool extends StatelessWidget {
-  const _QuickPool({required this.pool}); final Pool pool;
+  const _QuickPool({required this.pool});
+  final Pool pool;
+
   @override
-  Widget build(BuildContext context) => GradientPanel(
-        onTap: () => context.push('/pools/${pool.id}'),
-        padding: const EdgeInsets.all(18),
-        child: Row(children: [Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [Row(children: [StatusPill(pool.status), const SizedBox(width: 8), Text('GW${pool.gameweek}', style: Theme.of(context).textTheme.labelLarge)]), const SizedBox(height: 10), Text(money(pool.stakeCents), style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w900)), Text('Join an open ${money(pool.prizePoolCents)} prize pool', style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant))])), const Icon(Icons.arrow_forward_rounded)]),
-      );
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurfaceVariant;
+    return GradientPanel(
+      onTap: () => context.push('/pools/${pool.id}'),
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    StatusPill(pool.status),
+                    // Auto pool names already start with their gameweek.
+                    if (!pool.name.startsWith('GW${pool.gameweek}')) ...[
+                      const SizedBox(width: 8),
+                      Text('GW${pool.gameweek}', style: Theme.of(context).textTheme.labelLarge),
+                    ],
+                  ],
+                ),
+                const SizedBox(height: 10),
+                // The pool's full name ("GW7 Auto Pool - Professional"),
+                // wrapping onto a second line on a narrow screen and only
+                // then shortened.
+                Text(
+                  pool.name,
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                ),
+                const SizedBox(height: 6),
+                FitText(
+                  money(pool.stakeCents),
+                  style: Theme.of(context).textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.w900,
+                      ),
+                ),
+                Text(
+                  'Join an open ${money(pool.prizePoolCents)} prize pool',
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(color: muted),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Icon(Icons.arrow_forward_rounded),
+        ],
+      ),
+    );
+  }
 }
 
 class _Principle extends StatelessWidget {

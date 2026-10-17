@@ -215,6 +215,10 @@ class _ActivePools extends ConsumerWidget {
                         'start another for Gameweek ${myPool.gameweek}, '
                         'delete ${myPool.name} first.',
               ),
+              const SizedBox(height: 10),
+              // Head to head sits with the other ways to start a game, not
+              // at the bottom of the page under every auto pool.
+              _HeadToHeadCard(onTap: () => context.push('/challenges')),
               const SizedBox(height: 14),
               ...customPools.map(card),
               const SizedBox(height: 14),
@@ -236,8 +240,7 @@ class _ActivePools extends ConsumerWidget {
                 ...(byGameweek[gameweek]!..sort(_joinedThenStake)).map(card),
                 const SizedBox(height: 14),
               ],
-              _HeadToHeadCard(onTap: () => context.push('/challenges')),
-              const SizedBox(height: 18),
+              const SizedBox(height: 4),
               Center(
                 child: TextButton.icon(
                   onPressed: onShowPast,
@@ -666,18 +669,19 @@ class _HeadToHeadCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) => GradientPanel(
         onTap: onTap,
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         colors: const [Color(0xFF0A4437), Color(0xFF261A47)],
         child: Row(
           children: [
-            const CircleAvatar(radius: 26, backgroundColor: Color(0x243EFF75), child: Icon(Icons.compare_arrows_rounded, color: AppColors.lime)),
-            const SizedBox(width: 16),
+            const CircleAvatar(radius: 20, backgroundColor: Color(0x243EFF75), child: Icon(Icons.compare_arrows_rounded, color: AppColors.lime, size: 20)),
+            const SizedBox(width: 14),
             Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text('Head-to-head pool', style: Theme.of(context).textTheme.titleLarge?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
-                  const SizedBox(height: 4),
-                  const Text('Challenge another verified FPL manager.', style: TextStyle(color: Color(0xFFC9DED7))),
+                  Text('Create a head-to-head', style: Theme.of(context).textTheme.titleMedium?.copyWith(color: Colors.white, fontWeight: FontWeight.w900)),
+                  const SizedBox(height: 2),
+                  const Text('Challenge one verified FPL manager, winner takes the pot.', style: TextStyle(color: Color(0xFFC9DED7), fontSize: 13)),
                 ],
               ),
             ),
