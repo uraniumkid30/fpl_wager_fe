@@ -402,10 +402,19 @@ class _ChallengeCard extends StatelessWidget {
                       ?.copyWith(fontWeight: FontWeight.w900),
                 ),
                 const SizedBox(height: 5),
-                StatusPill(item.status),
+                StatusPill(challengeStatusLabel(item.status)),
               ],
             ),
           ],
         ),
       );
 }
+
+/// The word shown for a head-to-head's status. A head-to-head is live as
+/// soon as it is created ("accepted" on the server); older ones may still
+/// say "pending".
+String challengeStatusLabel(String status) => switch (status) {
+      'accepted' || 'pending' => 'Active',
+      'scoring' => 'Live',
+      _ => status,
+    };

@@ -15,6 +15,9 @@ import 'package:fplboardman/features/challenges/presentation/challenges_screen.d
 import 'package:fplboardman/features/dashboard/presentation/dashboard_screen.dart';
 import 'package:fplboardman/features/fpl_team/presentation/link_team_screen.dart';
 import 'package:fplboardman/features/history/presentation/history_screen.dart';
+import 'package:fplboardman/features/linked_browsers/presentation/link_browser_screen.dart';
+import 'package:fplboardman/features/linked_browsers/presentation/linked_browsers_screen.dart';
+import 'package:fplboardman/features/linked_browsers/presentation/scan_browser_code_screen.dart';
 import 'package:fplboardman/features/notifications/presentation/notifications_screen.dart';
 import 'package:fplboardman/features/payments/presentation/payment_callback_screen.dart';
 import 'package:fplboardman/features/payments/presentation/top_up_screen.dart';
@@ -39,7 +42,8 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 String? _returnTo;
 
 bool _isInviteLocation(String? location) =>
-    location != null && location.startsWith('/join/');
+    location != null &&
+    (location.startsWith('/join/') || location.startsWith('/link/'));
 
 /// The page a router state is at, as a path the router can be sent back to.
 ///
@@ -187,6 +191,25 @@ final routerProvider = Provider<GoRouter>((ref) {
         path: '/pools/:poolId',
         builder: (_, state) =>
             PoolDetailScreen(poolId: state.pathParameters['poolId']!),
+      ),
+      // Browsers signed in by scanning their QR code, scanning a new one,
+      // and approving it (the camera's link to the website opens /link/CODE).
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/linked-browsers',
+        builder: (_, _) => const LinkedBrowsersScreen(),
+        routes: [
+          GoRoute(
+            path: 'scan',
+            builder: (_, _) => const ScanBrowserCodeScreen(),
+          ),
+        ],
+      ),
+      GoRoute(
+        parentNavigatorKey: _rootNavigatorKey,
+        path: '/link/:code',
+        builder: (_, state) =>
+            LinkBrowserScreen(code: state.pathParameters['code']!),
       ),
       // The user's gameweeks: positions, pools played and money won.
       GoRoute(

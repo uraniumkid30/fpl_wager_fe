@@ -48,6 +48,12 @@ class AppConfig {
   static String poolInviteUrl(String code) =>
       '${apiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1/join/$code';
 
+  /// What the website's sign-in QR code holds. Scanned in the app it is
+  /// read directly; scanned with the phone's own camera it opens a small
+  /// page that hands the code to the app.
+  static String webLinkUrl(String code) =>
+      '${apiBaseUrl.replaceFirst(RegExp(r'/+$'), '')}/v1/link/$code';
+
   /// Where the provider sends the customer when they press cancel on the
   /// checkout page (Paystack only).
   ///

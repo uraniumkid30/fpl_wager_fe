@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fplboardman/app/theme/app_theme.dart';
@@ -238,6 +239,20 @@ class _ProfileBody extends ConsumerWidget {
           subtitle: 'Your position each gameweek, and the pools you played',
           onTap: () => context.push('/gameweeks'),
         ),
+
+        // ── Using FPLboardman on a computer ─────────────────────────────
+        // Only the phone app can scan the website's sign-in code.
+        if (!kIsWeb) ...[
+          const SizedBox(height: 26),
+          Text('Linked browsers', style: Theme.of(context).textTheme.titleLarge),
+          const SizedBox(height: 10),
+          _LinkTile(
+            icon: Icons.qr_code_scanner_rounded,
+            title: 'Linked browsers',
+            subtitle: 'Sign in on the website by scanning its code',
+            onTap: () => context.push('/linked-browsers'),
+          ),
+        ],
 
         // ── Everything else ────────────────────────────────────────────
         const SizedBox(height: 26),

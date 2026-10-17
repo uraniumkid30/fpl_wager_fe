@@ -56,16 +56,15 @@ class HistoryScreen extends ConsumerWidget {
                             entry.amountCents > 0
                                 ? Icons.add_circle_outline
                                 : Icons.remove_circle_outline,
-                            color: entry.amountCents > 0
-                                ? AppColors.emerald
-                                : AppColors.purple,
+                            color: moneyColor(context, entry.amountCents),
                           ),
                           isThreeLine: entry.bank != null,
                           title: Text(entry.description),
                           subtitle: Text(_details(entry)),
                           trailing: Text(
-                            money(entry.amountCents),
+                            signedMoney(entry.amountCents),
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                                  color: moneyColor(context, entry.amountCents),
                                   fontWeight: FontWeight.w900,
                                 ),
                           ),

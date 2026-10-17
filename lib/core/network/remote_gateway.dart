@@ -3,6 +3,7 @@ import 'package:fplboardman/core/network/api_client.dart';
 import 'package:fplboardman/core/network/app_gateway.dart';
 import 'package:fplboardman/core/storage/session_store.dart';
 import 'package:fplboardman/features/auth/domain/auth_models.dart';
+import 'package:fplboardman/features/auth/domain/web_link.dart';
 import 'package:fplboardman/features/challenges/domain/challenge.dart';
 import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
 import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
@@ -93,6 +94,51 @@ class RemoteGateway implements AppGateway {
       data: {'email': email, 'otp': otp},
     );
     return UserProfile.fromJson(_json(body, 'user'));
+  }
+
+  @override
+  Future<QrLogin> createQrLogin() async => QrLogin.fromJson(
+        await _client.post('/auth/qr', allowRefresh: false, data: const {}),
+      );
+
+  @override
+  Future<QrPoll> pollQrLogin(QrLogin login) async {
+    final body = await _client.post(
+      '/auth/qr/${login.id}/poll',
+      allowRefresh: false,
+      data: {'poll_token': login.pollToken},
+    );
+    final status = QrStatus.parse('${body['status']}');
+    if (status == QrStatus.approved && body['access_token'] is String) {
+      return QrPoll(status: status, session: await _saveTokenResponse(body));
+    }
+    return QrPoll(status: status);
+  }
+
+  @override
+  Future<QrRequest> scanQrLogin(String code) async => QrRequest.fromJson(
+        await _client.post('/auth/qr/scan', data: {'code': code}),
+      );
+
+  @override
+  Future<void> approveQrLogin(String code) async {
+    await _client.post('/auth/qr/approve', data: {'code': code});
+  }
+
+  @override
+  Future<void> declineQrLogin(String code) async {
+    await _client.post('/auth/qr/decline', data: {'code': code});
+  }
+
+  @override
+  Future<List<WebLink>> webLinks() async =>
+      _list(await _client.get('/me/web-links'), 'items')
+          .map(WebLink.fromJson)
+          .toList();
+
+  @override
+  Future<void> revokeWebLink(String id) async {
+    await _client.delete('/me/web-links/$id');
   }
 
   Future<AuthSession> _saveTokenResponse(Map<String, Object?> body) async {

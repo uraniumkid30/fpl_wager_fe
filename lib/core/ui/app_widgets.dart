@@ -23,6 +23,22 @@ String money(int cents) => NumberFormat.currency(
       decimalDigits: 2,
     ).format(cents / 100);
 
+/// An amount with its direction, spaced so the sign stands apart:
+/// "+ ₦300.00" for money coming in, "− ₦300.00" for money going out.
+String signedMoney(int cents) {
+  if (cents == 0) return money(0);
+  return '${cents > 0 ? '+' : '−'} ${money(cents.abs())}';
+}
+
+/// Green for money coming in, red for money going out (null for nothing),
+/// in a shade that reads on the current theme.
+Color? moneyColor(BuildContext context, int cents) {
+  if (cents == 0) return null;
+  final dark = Theme.of(context).brightness == Brightness.dark;
+  if (cents > 0) return dark ? const Color(0xFF4ADE80) : AppColors.emerald;
+  return dark ? AppColors.danger : const Color(0xFFD92D3A);
+}
+
 /// A figure in large type that shrinks to fit the space it has, instead of
 /// wrapping onto a second line or running off the edge when it is long
 /// ("₦1,250,000.00").

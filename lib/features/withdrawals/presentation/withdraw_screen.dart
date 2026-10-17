@@ -298,6 +298,10 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
   final _amount = TextEditingController();
   bool _busy = false;
 
+  /// Whether the typed amount can be withdrawn. Checked as it is typed, so
+  /// the button is only on for an amount that will go through.
+  bool get _amountOk => _validateAmount(_amount.text) == null;
+
   /// Identifies one withdrawal to the server. It is kept until the request
   /// is known to have succeeded, so that trying again after a lost
   /// connection cannot create a second withdrawal for the same tap.
@@ -325,6 +329,8 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
           TextFormField(
             controller: _amount,
             enabled: !_busy && !tooLittle,
+            // An amount over the balance is flagged as soon as it is typed.
+            autovalidateMode: AutovalidateMode.onUserInteraction,
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
             inputFormatters: [
               FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
@@ -332,7 +338,8 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
             decoration: InputDecoration(
               labelText: 'Amount',
               prefixText: '₦ ',
-              helperText: 'Minimum ${money(widget.minimumCents)}',
+              helperText: 'Available ${money(widget.availableCents)} · '
+                  'minimum ${money(widget.minimumCents)}',
               suffixIcon: TextButton(
                 onPressed: _busy || tooLittle
                     ? null
@@ -340,17 +347,21 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
                         _amount.text =
                             (widget.availableCents / 100).toStringAsFixed(2);
                         _newRequest();
+                        setState(() {});
                       },
                 child: const Text('All'),
               ),
             ),
             validator: _validateAmount,
             // A different amount is a different request.
-            onChanged: (_) => _newRequest(),
+            onChanged: (_) {
+              _newRequest();
+              setState(() {});
+            },
           ),
           const SizedBox(height: 16),
           FilledButton.icon(
-            onPressed: _busy || tooLittle ? null : _submit,
+            onPressed: _busy || tooLittle || !_amountOk ? null : _submit,
             icon: _busy
                 ? const SizedBox.square(
                     dimension: 20,
@@ -387,7 +398,7 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
       return 'The minimum is ${money(widget.minimumCents)}';
     }
     if (cents > widget.availableCents) {
-      return 'You have ${money(widget.availableCents)} available';
+      return 'More than your ${money(widget.availableCents)} available';
     }
     return null;
   }
@@ -430,7 +441,10 @@ class _WithdrawFormState extends ConsumerState<_WithdrawForm> {
       ref.invalidate(withdrawalsProvider);
       ref.invalidate(walletProvider);
       ref.invalidate(dashboardProvider);
+      // Back to an empty form, without an "Enter an amount" error.
+      _form.currentState?.reset();
       _amount.clear();
+      setState(() {});
       AppNotice.success(
         context,
         'Withdrawal requested. We will email you when it is paid.',
@@ -466,9 +480,15 @@ class _WithdrawalTile extends StatelessWidget {
             children: [
               Expanded(
                 child: Text(
-                  money(item.amountCents),
+                  // Money leaving the wallet, unless it came back.
+                  item.wasRefunded
+                      ? money(item.amountCents)
+                      : signedMoney(-item.amountCents),
                   style: Theme.of(context).textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w900,
+                        color: item.wasRefunded
+                            ? null
+                            : moneyColor(context, -item.amountCents),
                       ),
                 ),
               ),

@@ -193,7 +193,7 @@ class _LedgerRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final credit = entry.amountCents > 0;
-    final color = credit ? AppColors.emerald : AppColors.purple;
+    final color = moneyColor(context, entry.amountCents) ?? AppColors.emerald;
 
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 10),
@@ -234,9 +234,9 @@ class _LedgerRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${credit ? '+' : ''}${money(entry.amountCents)}',
+            signedMoney(entry.amountCents),
             style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: credit ? AppColors.emerald : null,
+              color: moneyColor(context, entry.amountCents),
               fontWeight: FontWeight.w900,
             ),
           ),

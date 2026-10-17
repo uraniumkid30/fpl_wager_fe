@@ -58,13 +58,19 @@ class GameweekHistoryScreen extends ConsumerWidget {
                   const SizedBox(height: 10),
                   Row(
                     children: [
-                      Expanded(child: _Stat(label: 'STAKED', value: money(staked))),
+                      Expanded(
+                        child: _Stat(
+                          label: 'STAKED',
+                          value: money(staked),
+                          color: moneyColor(context, -staked),
+                        ),
+                      ),
                       const SizedBox(width: 10),
                       Expanded(
                         child: _Stat(
                           label: 'WON',
                           value: money(won),
-                          color: won > 0 ? AppColors.lime : null,
+                          color: moneyColor(context, won),
                         ),
                       ),
                     ],
@@ -174,12 +180,18 @@ class _GameweekCard extends StatelessWidget {
           const SizedBox(height: 14),
           Row(
             children: [
-              Expanded(child: _Money(label: 'Staked', cents: item.stakedCents)),
+              Expanded(
+                child: _Money(
+                  label: 'Staked',
+                  cents: item.stakedCents,
+                  color: moneyColor(context, -item.stakedCents),
+                ),
+              ),
               Expanded(
                 child: _Money(
                   label: 'Won',
                   cents: item.wonCents,
-                  color: item.wonCents > 0 ? AppColors.lime : null,
+                  color: moneyColor(context, item.wonCents),
                 ),
               ),
               Expanded(
@@ -187,7 +199,7 @@ class _GameweekCard extends StatelessWidget {
                   label: 'Net',
                   cents: net,
                   signed: true,
-                  color: net > 0 ? AppColors.lime : null,
+                  color: moneyColor(context, net),
                 ),
               ),
             ],
@@ -221,9 +233,7 @@ class _Money extends StatelessWidget {
           ),
           const SizedBox(height: 2),
           FitText(
-            signed
-                ? '${cents >= 0 ? '+' : '−'}${money(cents.abs())}'
-                : money(cents),
+            signed ? signedMoney(cents) : money(cents),
             style: Theme.of(context).textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w800,
                   color: color,
@@ -271,13 +281,13 @@ class _PoolRow extends StatelessWidget {
             ),
             Text(
               pool.payoutCents > 0
-                  ? '+${money(pool.payoutCents)}'
+                  ? signedMoney(pool.payoutCents)
                   : pool.isSettled
                       ? '—'
                       : '',
               style: Theme.of(context).textTheme.labelLarge?.copyWith(
                     fontWeight: FontWeight.w900,
-                    color: pool.payoutCents > 0 ? AppColors.lime : muted,
+                    color: moneyColor(context, pool.payoutCents) ?? muted,
                   ),
             ),
             Icon(Icons.chevron_right_rounded, size: 18, color: muted),

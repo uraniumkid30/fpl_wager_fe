@@ -1,4 +1,5 @@
 import 'package:fplboardman/features/auth/domain/auth_models.dart';
+import 'package:fplboardman/features/auth/domain/web_link.dart';
 import 'package:fplboardman/features/challenges/domain/challenge.dart';
 import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
 import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
@@ -42,6 +43,30 @@ abstract interface class AppGateway {
   /// "Verify email", step two: confirms the code. On success [email] becomes
   /// the account's verified address and the updated profile is returned.
   Future<UserProfile> verifyEmail(String email, String otp);
+
+  // ── Signing in on the website with the phone (QR code) ──────────────
+
+  /// Website: a new QR code to show. No sign-in needed.
+  Future<QrLogin> createQrLogin();
+
+  /// Website: has the phone approved [login]? When it has, the session is
+  /// saved and returned in [QrPoll.session].
+  Future<QrPoll> pollQrLogin(QrLogin login);
+
+  /// Phone: which browser is asking, for a code read from its QR.
+  Future<QrRequest> scanQrLogin(String code);
+
+  /// Phone: sign that browser in (for 90 days).
+  Future<void> approveQrLogin(String code);
+
+  /// Phone: refuse it.
+  Future<void> declineQrLogin(String code);
+
+  /// Phone: the browsers signed in to this account.
+  Future<List<WebLink>> webLinks();
+
+  /// Phone: sign a browser out.
+  Future<void> revokeWebLink(String id);
 
   Future<void> logout();
   Future<Dashboard> dashboard();

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:fplboardman/app/theme/app_theme.dart';
 import 'package:fplboardman/core/ui/app_notice.dart';
 import 'package:fplboardman/core/ui/app_widgets.dart';
+import 'package:fplboardman/features/auth/presentation/web_qr_sign_in.dart';
 import 'package:go_router/go_router.dart';
 
 class WelcomeScreen extends StatelessWidget {
@@ -113,7 +114,9 @@ class WelcomeScreen extends StatelessWidget {
         ),
         child: Padding(
           padding: const EdgeInsets.fromLTRB(24, 28, 24, 24),
-          child: Column(
+          child: kIsWeb
+              ? _webCard(context, theme, muted)
+              : Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               Center(
@@ -174,6 +177,39 @@ class WelcomeScreen extends StatelessWidget {
             ],
           ),
         ),
+      );
+
+  /// On the website: sign in by scanning a QR code with the phone app, or
+  /// with email.
+  Widget _webCard(BuildContext context, ThemeData theme, Color muted) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const WebQrSignIn(),
+          const SizedBox(height: 18),
+          Row(
+            children: [
+              const Expanded(child: Divider()),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                child: Text('or', style: TextStyle(color: muted)),
+              ),
+              const Expanded(child: Divider()),
+            ],
+          ),
+          const SizedBox(height: 14),
+          OutlinedButton.icon(
+            onPressed: () => context.go('/email-sign-in'),
+            icon: const Icon(Icons.mail_outline_rounded),
+            label: const Text('Sign in with email'),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'New to FPLboardman? Create your account in the Android app with '
+            'Sign in with FPL, then sign in here with your phone.',
+            textAlign: TextAlign.center,
+            style: theme.textTheme.bodySmall?.copyWith(color: muted),
+          ),
+        ],
       );
 }
 

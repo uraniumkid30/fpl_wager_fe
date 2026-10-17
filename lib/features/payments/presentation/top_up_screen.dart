@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:fplboardman/app/theme/app_theme.dart';
 import 'package:fplboardman/core/config/app_config.dart';
@@ -10,6 +11,8 @@ import 'package:fplboardman/features/dashboard/presentation/dashboard_controller
 import 'package:fplboardman/features/payments/presentation/checkout_screen.dart';
 import 'package:fplboardman/features/payments/presentation/payment_controller.dart';
 import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
+import 'package:fplboardman/features/withdrawals/domain/withdrawal_models.dart';
+import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:go_router/go_router.dart';
 
@@ -22,6 +25,59 @@ class TopUpScreen extends ConsumerStatefulWidget {
 
 class _TopUpScreenState extends ConsumerState<TopUpScreen> {
   static const _providerLabels = {'paystack': 'Paystack', 'korapay': 'Korapay'};
+
+  /// The smallest and largest top-up the server accepts.
+  static const _minimumCents = 10000;
+  static const _maximumCents = 100000000;
+
+  /// Quick picks under the amount field.
+  static const _quickAmounts = [100000, 200000, 500000, 1000000];
+
+  late final TextEditingController _amount;
+
+  /// What is wrong with the typed amount, or null when it can be paid.
+  String? _problem;
+
+  @override
+  void initState() {
+    super.initState();
+    final cents = ref.read(topUpDraftProvider).amountCents;
+    _amount = TextEditingController(text: _nairaText(cents));
+  }
+
+  @override
+  void dispose() {
+    _amount.dispose();
+    super.dispose();
+  }
+
+  /// "1,000" from 100000 cents (whole naira without decimals).
+  static String _nairaText(int cents) => cents % 100 == 0
+      ? NumberFormat.decimalPattern().format(cents ~/ 100)
+      : (cents / 100).toStringAsFixed(2);
+
+  void _amountChanged(String text) {
+    final cents = nairaToCents(text);
+    String? problem;
+    if (text.trim().isEmpty) {
+      problem = 'Enter the amount to add';
+    } else if (cents == null) {
+      problem = 'Enter an amount in naira, like 2,500';
+    } else if (cents < _minimumCents) {
+      problem = 'The minimum top-up is ${money(_minimumCents)}';
+    } else if (cents > _maximumCents) {
+      problem = 'The most you can add at once is ${money(_maximumCents)}';
+    }
+    setState(() => _problem = problem);
+    if (problem == null && cents != null) {
+      ref.read(topUpDraftProvider.notifier).selectAmount(cents);
+    }
+  }
+
+  void _pick(int cents) {
+    _amount.text = _nairaText(cents);
+    _amountChanged(_amount.text);
+  }
 
   /// True from the moment the checkout opens until its result is known, so
   /// the pay button cannot start a second payment in the meantime.
@@ -59,15 +115,34 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    Text('Choose amount', style: Theme.of(context).textTheme.titleLarge),
+                    Text('Amount to add', style: Theme.of(context).textTheme.titleLarge),
                     const SizedBox(height: 10),
+                    TextField(
+                      controller: _amount,
+                      enabled: !busy,
+                      keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                      inputFormatters: [
+                        FilteringTextInputFormatter.allow(RegExp(r'[0-9.,]')),
+                      ],
+                      style: Theme.of(context).textTheme.headlineSmall?.copyWith(fontWeight: FontWeight.w800),
+                      decoration: InputDecoration(
+                        prefixText: '₦ ',
+                        hintText: '0',
+                        errorText: _problem,
+                        helperText: _problem == null
+                            ? 'From ${money(_minimumCents)} to ${money(_maximumCents)}'
+                            : null,
+                      ),
+                      onChanged: _amountChanged,
+                    ),
+                    const SizedBox(height: 12),
                     Wrap(
                       spacing: 10,
                       runSpacing: 10,
-                      children: [100000, 200000, 500000, 1000000].map((amount) => ChoiceChip(
+                      children: _quickAmounts.map((amount) => ChoiceChip(
                         label: Text(money(amount)),
-                        selected: draft.amountCents == amount,
-                        onSelected: (_) => ref.read(topUpDraftProvider.notifier).selectAmount(amount),
+                        selected: _problem == null && draft.amountCents == amount,
+                        onSelected: busy ? null : (_) => _pick(amount),
                       )).toList(),
                     ),
                     const SizedBox(height: 24),
@@ -87,11 +162,11 @@ class _TopUpScreenState extends ConsumerState<TopUpScreen> {
                       const SizedBox(height: 12),
                     ],
                     FilledButton.icon(
-                      onPressed: busy ? null : () => _startCheckout(draft),
+                      onPressed: busy || _problem != null ? null : () => _startCheckout(draft),
                       icon: busy
                           ? const SizedBox.square(dimension: 20, child: CircularProgressIndicator(strokeWidth: 2))
                           : const Icon(Icons.lock_rounded),
-                      label: Text('Continue to pay ${money(draft.amountCents)}'),
+                      label: Text(_problem == null ? 'Continue to pay ${money(draft.amountCents)}' : 'Enter an amount'),
                     ),
                     const SizedBox(height: 10),
                     Text('Checkout opens securely inside the app. Your wallet is credited as soon as the payment is confirmed.', textAlign: TextAlign.center, style: Theme.of(context).textTheme.bodySmall?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant)),

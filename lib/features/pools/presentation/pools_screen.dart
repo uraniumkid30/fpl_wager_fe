@@ -433,12 +433,11 @@ class _PastGameweekHeader extends StatelessWidget {
           ),
         ),
         Text(
-          '${net >= 0 ? '+' : '−'}${money(net.abs())}',
+          signedMoney(net),
           style: Theme.of(context).textTheme.labelLarge?.copyWith(
                 fontWeight: FontWeight.w900,
-                color: net > 0
-                    ? AppColors.lime
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
+                color: moneyColor(context, net) ??
+                    Theme.of(context).colorScheme.onSurfaceVariant,
               ),
         ),
       ],
@@ -512,10 +511,10 @@ class PastPoolTile extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               Text(
-                won > 0 ? '+${money(won)}' : 'No prize',
+                won > 0 ? signedMoney(won) : 'No prize',
                 style: Theme.of(context).textTheme.labelLarge?.copyWith(
                       fontWeight: FontWeight.w900,
-                      color: won > 0 ? AppColors.lime : muted,
+                      color: moneyColor(context, won) ?? muted,
                     ),
               ),
               const SizedBox(height: 2),

@@ -3,6 +3,7 @@ import 'package:fplboardman/features/auth/domain/auth_models.dart';
 import 'package:fplboardman/features/challenges/domain/challenge.dart';
 import 'package:fplboardman/features/dashboard/domain/dashboard.dart';
 import 'package:fplboardman/features/fpl_team/domain/fpl_team.dart';
+import 'package:fplboardman/features/auth/domain/web_link.dart';
 import 'package:fplboardman/features/pools/domain/gameweek_history.dart';
 import 'package:fplboardman/features/pools/domain/pool.dart';
 import 'package:fplboardman/features/settings/domain/app_settings.dart';
@@ -23,9 +24,9 @@ class DemoGateway implements AppGateway {
     LedgerEntry(id: 'l3', kind: 'top_up', description: 'Top up', amountCents: 200000, createdAt: DateTime.now().subtract(const Duration(days: 3))),
   ];
   final List<Pool> _pools = [
-    Pool(id: 'auto-1000', name: 'GW2 Auto Pool · ₦1,000', gameweek: 2, stakeCents: 100000, prizePoolCents: 285000, status: 'open', memberCount: 3, maxMembers: 10000, poolKind: 'auto', drawMethod: PoolDrawMethod.split, autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), membershipStatus: 'active'),
-    Pool(id: 'auto-2000', name: 'GW2 Auto Pool · ₦2,000', gameweek: 2, stakeCents: 200000, prizePoolCents: 380000, status: 'open', memberCount: 2, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
-    Pool(id: 'auto-5000', name: 'GW2 Auto Pool · ₦5,000', gameweek: 2, stakeCents: 500000, prizePoolCents: 0, status: 'open', memberCount: 0, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
+    Pool(id: 'auto-1000', name: 'GW2 Auto Pool - Starter', gameweek: 2, stakeCents: 100000, prizePoolCents: 285000, status: 'open', memberCount: 3, maxMembers: 10000, poolKind: 'auto', drawMethod: PoolDrawMethod.split, autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), membershipStatus: 'active'),
+    Pool(id: 'auto-2000', name: 'GW2 Auto Pool - Novice', gameweek: 2, stakeCents: 200000, prizePoolCents: 380000, status: 'open', memberCount: 2, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
+    Pool(id: 'auto-5000', name: 'GW2 Auto Pool - Expert', gameweek: 2, stakeCents: 500000, prizePoolCents: 0, status: 'open', memberCount: 0, maxMembers: 10000, poolKind: 'auto', autoSeriesNo: 1, deadline: DateTime.now().add(const Duration(days: 3, hours: 18))),
     Pool(id: 'pool-3', name: 'Chris pool', gameweek: 2, stakeCents: 100000, prizePoolCents: 0, status: 'draft', memberCount: 0, rules: 'Highest score in the gameweek wins.', deadline: DateTime.now().add(const Duration(days: 3, hours: 18)), approvalRequired: true),
   ];
   BankAccount? _bankAccount;
@@ -55,6 +56,21 @@ class DemoGateway implements AppGateway {
   Future<VerificationChallenge> requestEmailVerification(String email) async { await _wait(); return VerificationChallenge(message: 'Enter 123456 in demo mode.', verificationPath: '/v1/me/email/verify', expiresInSeconds: 600); }
   @override
   Future<UserProfile> verifyEmail(String email, String otp) async { await _wait(); final current = _session?.user ?? _user(email); final updated = UserProfile(id: current.id, fullName: current.fullName, email: email, emailVerified: true, fplEntryId: current.fplEntryId); _session = _newSession(updated); return updated; }
+  final List<WebLink> _webLinks = [];
+  @override
+  Future<QrLogin> createQrLogin() async { await _wait(); return QrLogin(id: _uuid.v4(), code: _uuid.v4().replaceAll('-', ''), pollToken: 'demo', expiresAt: DateTime.now().add(const Duration(minutes: 2))); }
+  @override
+  Future<QrPoll> pollQrLogin(QrLogin login) async { await _wait(); return const QrPoll(status: QrStatus.pending); }
+  @override
+  Future<QrRequest> scanQrLogin(String code) async { await _wait(); return const QrRequest(label: 'Chrome on macOS'); }
+  @override
+  Future<void> approveQrLogin(String code) async { await _wait(); final now = DateTime.now(); _webLinks.insert(0, WebLink(id: _uuid.v4(), label: 'Chrome on macOS', createdAt: now, expiresAt: now.add(const Duration(days: 90)), lastUsedAt: now)); }
+  @override
+  Future<void> declineQrLogin(String code) async { await _wait(); }
+  @override
+  Future<List<WebLink>> webLinks() async { await _wait(); return List.of(_webLinks); }
+  @override
+  Future<void> revokeWebLink(String id) async { await _wait(); _webLinks.removeWhere((link) => link.id == id); }
   @override
   Future<void> logout() async { await _wait(); _session = null; }
 
@@ -93,7 +109,7 @@ class DemoGateway implements AppGateway {
   @override
   Future<List<Challenge>> challenges() async { await _wait(); return List.unmodifiable(_challenges); }
   @override
-  Future<Challenge> createChallenge({required int opponentTeamId, required int gameweek, required int stakeCents}) async { await _wait(); final item = Challenge(id: _uuid.v4(), opponentName: 'FPL manager', opponentTeamId: opponentTeamId, gameweek: gameweek, stakeCents: stakeCents, status: 'pending'); _challenges.insert(0, item); _balance -= stakeCents; return item; }
+  Future<Challenge> createChallenge({required int opponentTeamId, required int gameweek, required int stakeCents}) async { await _wait(); final item = Challenge(id: _uuid.v4(), opponentName: 'FPL manager', opponentTeamId: opponentTeamId, gameweek: gameweek, stakeCents: stakeCents, status: 'accepted'); _challenges.insert(0, item); _balance -= stakeCents; return item; }
   @override
   Future<WalletSummary> wallet() async { await _wait(); return WalletSummary(availableCents: _balance, lockedCents: 100000, ledger: List.unmodifiable(_ledger)); }
   @override

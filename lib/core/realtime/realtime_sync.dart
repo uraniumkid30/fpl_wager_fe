@@ -10,6 +10,7 @@ import 'package:fplboardman/core/realtime/realtime_socket.dart';
 import 'package:fplboardman/features/auth/presentation/auth_controller.dart';
 import 'package:fplboardman/features/challenges/presentation/challenges_controller.dart';
 import 'package:fplboardman/features/dashboard/presentation/dashboard_controller.dart';
+import 'package:fplboardman/features/linked_browsers/presentation/linked_browsers_controller.dart';
 import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
 import 'package:fplboardman/features/wallet/presentation/wallet_controller.dart';
 import 'package:fplboardman/features/notifications/presentation/notifications_controller.dart';
@@ -69,6 +70,7 @@ void _invalidate(Ref ref, Set<String> resources, String? resourceId) {
     ref.invalidate(notificationsProvider);
   }
   if (resources.contains('withdrawals')) ref.invalidate(withdrawalsProvider);
+  if (resources.contains('web_links')) ref.invalidate(webLinksProvider);
   if (resources.contains('bank_account')) ref.invalidate(bankAccountProvider);
 }
 

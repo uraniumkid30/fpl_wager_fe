@@ -106,16 +106,36 @@ class JoinPoolScreen extends ConsumerWidget {
             error: error,
             onRetry: () => ref.invalidate(poolInviteProvider(code)),
           ),
-          data: (item) => _Body(
+          data: (item) {
+            // The pool's creator (who entered when creating it) or someone
+            // already in it has nothing to join: open the pool itself.
+            if (item.isCreator || item.hasJoined || item.isPending) {
+              _openPoolInstead(context, item.id);
+              return const Center(child: CircularProgressIndicator());
+            }
+            return _Body(
             item: item,
             busy: action.isLoading,
             invited: true,
             onJoin: () => _join(context, ref, item),
             onChanged: () => ref.invalidate(poolInviteProvider(code)),
-          ),
+          );
+          },
         ),
       ),
     );
+  }
+
+  /// Replaces this page with the pool's own page, once the frame is built.
+  void _openPoolInstead(BuildContext context, String poolId) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!context.mounted) return;
+      if (context.canPop()) {
+        context.pushReplacement('/pools/$poolId');
+      } else {
+        context.go('/pools/$poolId');
+      }
+    });
   }
 
   Future<void> _join(BuildContext context, WidgetRef ref, Pool item) async {
@@ -772,8 +792,9 @@ class _OwnerPanelState extends ConsumerState<_OwnerPanel> {
                     ? 'Nobody has joined yet, so you can still edit or delete '
                         'this pool.'
                     : others == 0
-                        ? 'Only you have joined. The pool can no longer be '
-                            'edited, but you can delete it at no cost.'
+                        ? 'You are the only manager in it so far. You can '
+                            'still edit it, or delete it at no cost and get '
+                            'your ${money(pool.stakeCents)} back.'
                         : '$others other ${others == 1 ? 'manager has' : 'managers have'} '
                             'joined. The pool can no longer be edited. Deleting '
                             'it refunds everyone and costs you '
@@ -1009,7 +1030,7 @@ class _DeletePoolDialog extends StatelessWidget {
     } else {
       points = [
         'All ${manage.entries} entries are refunded in full '
-            '(${money(pool.stakeCents)} each), yours included if you joined.',
+            '(${money(pool.stakeCents)} each), yours included.',
         'A fee of ${manage.deleteFeePercentLabel}% of the '
             '${money(pool.stakeCents)} entry fee — ${money(fee)} — is taken '
             'from your wallet.',

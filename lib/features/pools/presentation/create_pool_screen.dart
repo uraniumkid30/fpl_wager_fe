@@ -8,6 +8,7 @@ import 'package:fplboardman/features/fpl_team/presentation/team_requirement.dart
 import 'package:fplboardman/features/pools/domain/pool.dart';
 import 'package:fplboardman/features/pools/presentation/payout_editor.dart';
 import 'package:fplboardman/features/pools/presentation/pools_controller.dart';
+import 'package:fplboardman/features/wallet/presentation/insufficient_funds.dart';
 import 'package:go_router/go_router.dart';
 
 class CreatePoolDraft {
@@ -281,7 +282,7 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
               ),
               const SizedBox(height: 10),
               Text(
-                'FPLboardman reviews new pools before anyone can join; we will tell you in the app and by email when yours is approved. Creating a pool costs nothing, and you can edit it until someone joins.',
+                'You are the first manager in your pool: your stake is taken from your wallet when you create it. FPLboardman reviews new pools before anyone else can join, and we will tell you when yours is approved. You can edit it until another manager joins. If it is not approved before the deadline, or you delete it while you are the only one in it, your stake comes straight back.',
                 textAlign: TextAlign.center,
                 style: Theme.of(context).textTheme.labelSmall?.copyWith(
                       color: Theme.of(context).colorScheme.onSurfaceVariant,
@@ -335,16 +336,16 @@ class _CreatePoolScreenState extends ConsumerState<CreatePoolScreen> {
         );
     if (!mounted) return;
     if (pool == null) {
-      AppNotice.error(
-        context,
-        ref.read(poolActionProvider).error ?? 'The pool could not be created.',
-      );
+      final error = ref.read(poolActionProvider).error;
+      // Creating a pool pays for the creator's own entry.
+      if (openTopUpIfInsufficientFunds(context, error)) return;
+      AppNotice.error(context, error ?? 'The pool could not be created.');
       return;
     }
 
     AppNotice.success(
       context,
-      '${pool.name} was created. Share its invite link with the managers you want in.',
+      '${pool.name} was created and you are in it. Share its invite link with the managers you want in.',
     );
     // Closes with the new pool's id, so the pools page can open it.
     context.pop(pool.id);
