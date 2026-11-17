@@ -1,0 +1,63 @@
+{
+  "expo": {
+    "name": "FPL Boardman",
+    "slug": "fplboardman",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "scheme": "fplboardman",
+    "userInterfaceStyle": "automatic",
+    "backgroundColor": "#1A0B28",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.fplboardman.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "FPL Boardman uses the camera to scan the QR code shown on a browser you want to sign in to."
+      }
+    },
+    "android": {
+      "package": "com.fplboardman.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#3D195B",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png",
+      "output": "single",
+      "bundler": "metro",
+      "name": "FPL Boardman",
+      "themeColor": "#3D195B"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-secure-store",
+      "expo-font",
+      "expo-web-browser",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash-icon.png",
+          "imageWidth": 160,
+          "backgroundColor": "#3D195B"
+        }
+      ],
+      [
+        "expo-camera",
+        {
+          "cameraPermission": "FPL Boardman uses the camera to scan the QR code shown on a browser you want to sign in to.",
+          "recordAudioAndroid": false
+        }
+      ]
+    ],
+    "experiments": {
+      "typedRoutes": false
+    }
+  }
+}
