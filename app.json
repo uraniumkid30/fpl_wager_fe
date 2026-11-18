@@ -54,7 +54,8 @@
           "cameraPermission": "FPL Boardman uses the camera to scan the QR code shown on a browser you want to sign in to.",
           "recordAudioAndroid": false
         }
-      ]
+      ],
+      "expo-status-bar"
     ],
     "experiments": {
       "typedRoutes": false
